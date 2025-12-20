@@ -19,7 +19,9 @@ The installer prompts for scope (project-level or global) and creates symlinks t
 
 - **Base folders** (e.g., `fightingwithai.com/`) stay on `main`
 - **Worktrees** (e.g., `fightingwithai.com-feature/`) are created for tasks
-- **Manifest** (`manifest.jsonl`) tracks all folders, their purpose, and ancestry
+- **Workflow state** (`workflow.jsonl`) tracks branches, purposes, relationships (committable)
+- **Local state** (`local.jsonl`) tracks worktree folders (not committed)
+- **Config** (`.sailkit.yaml`) defines workspace repos and settings
 
 ## Commands
 
@@ -41,16 +43,36 @@ Run from your Projects folder:
 ./sailkit-dev/scripts/worktree-new myrepo feature-x --based-on develop --purpose "Add login"
 ```
 
-## Manifest
+## State Files
 
-The manifest (`manifest.jsonl`) is the source of truth. It's JSON-L format—one JSON object per line:
+Sailkit uses two state files in the workspace root:
 
+**workflow.jsonl** (committable - portable across machines):
 ```jsonl
-{"folder":"myrepo","repo":"myrepo","branch":"main","base":true}
-{"folder":"myrepo-feature","repo":"myrepo","branch":"feature","base":false,"basedOn":"main","purpose":"Add login"}
+{"repo":"myrepo","branch":"feature","basedOn":"main","purpose":"Add login","status":"in_progress","created":"2024-12-20T12:00:00Z"}
 ```
 
-Agents should interact via scripts, never edit the manifest directly.
+**local.jsonl** (not committed - local worktree paths):
+```jsonl
+{"folder":"myrepo","repo":"myrepo","branch":"main","base":true}
+{"folder":"myrepo-feature","repo":"myrepo","branch":"feature","base":false}
+```
+
+Agents should interact via scripts, never edit these files directly.
+
+## Config
+
+`.sailkit.yaml` defines the workspace:
+```yaml
+repos:
+  - name: myrepo
+    remote: https://github.com/org/myrepo.git
+    defaultBranch: main
+
+state:
+  workflow: workflow.jsonl
+  local: local.jsonl
+```
 
 ## Testing
 
@@ -95,7 +117,23 @@ After install, these slash commands are available:
 
 Documented for future consideration:
 
-- **Auto-fix with --force**: `worktree-check --fix` to automatically checkout main on violating base folders. Would need `--force` flag to handle dirty working directories.
-- **Git hooks in repos**: Pre-checkout hooks in each repo's `.git/hooks/` to block unsafe branch switches. Requires meta-tooling to install hooks.
-- **Cross-repo coordination**: Track which agent owns which worktree to prevent conflicts.
-- **Platform testing**: CI that tests on Windows (path separators), different shells (fish, zsh, PowerShell).
+### Workflow Automation
+- **worktree-push**: Push branch and optionally create PR
+- **worktree-finish**: Push + PR + mark complete in workflow.jsonl
+- **worktree-checkout**: Recreate local worktree from workflow.jsonl entry (for switching machines)
+- **Auto-PR templates**: Configure PR body template in .sailkit.yaml
+
+### Validation & Safety
+- **Auto-fix with --force**: `worktree-check --fix` to checkout main on violating base folders
+- **Git hooks in repos**: Pre-checkout hooks to block unsafe branch switches
+- **Cross-repo coordination**: Track which agent owns which worktree
+
+### Configuration
+- **Local overrides**: `~/.sailkit.yaml` for user-specific settings
+- **Per-repo config**: `.sailkit.yaml` in each repo for repo-specific behavior
+- **Workflow config**: autoPush, autoPR, cleanupOnMerge settings
+
+### Platform Support
+- **Windows**: Path separator handling, PowerShell scripts
+- **Shell compatibility**: Fish, zsh, bash differences
+- **CI integration**: GitHub Actions for smoke tests

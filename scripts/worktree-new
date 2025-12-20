@@ -6,8 +6,9 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
-PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
-MANIFEST="$SAILKIT_DIR/manifest.jsonl"
+WORKSPACE_DIR="$(dirname "$SAILKIT_DIR")"
+WORKFLOW_FILE="$WORKSPACE_DIR/workflow.jsonl"
+LOCAL_FILE="$WORKSPACE_DIR/local.jsonl"
 
 # Parse arguments
 REPO=""
@@ -42,8 +43,9 @@ if [ -z "$REPO" ] || [ -z "$BRANCH" ]; then
     exit 1
 fi
 
-REPO_DIR="$PROJECTS_DIR/$REPO"
-WORKTREE_DIR="$PROJECTS_DIR/$REPO-$BRANCH"
+REPO_DIR="$WORKSPACE_DIR/$REPO"
+WORKTREE_DIR="$WORKSPACE_DIR/$REPO-$BRANCH"
+FOLDER_NAME="$REPO-$BRANCH"
 
 if [ ! -d "$REPO_DIR/.git" ] && [ ! -f "$REPO_DIR/.git" ]; then
     echo "Error: $REPO_DIR is not a git repository"
@@ -55,15 +57,18 @@ if [ -d "$WORKTREE_DIR" ]; then
     exit 1
 fi
 
+TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 echo "Creating worktree: $WORKTREE_DIR"
 git -C "$REPO_DIR" worktree add "$WORKTREE_DIR" "$BRANCH" 2>/dev/null || \
 git -C "$REPO_DIR" worktree add -b "$BRANCH" "$WORKTREE_DIR" "$BASED_ON"
 
-# Append to manifest
-ENTRY=$(cat <<EOF
-{"folder":"$REPO-$BRANCH","repo":"$REPO","branch":"$BRANCH","base":false,"basedOn":"$BASED_ON","purpose":"$PURPOSE","created":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
-EOF
-)
-echo "$ENTRY" >> "$MANIFEST"
+# Add to workflow.jsonl (committable - branch metadata)
+WORKFLOW_ENTRY="{\"repo\":\"$REPO\",\"branch\":\"$BRANCH\",\"basedOn\":\"$BASED_ON\",\"purpose\":\"$PURPOSE\",\"status\":\"in_progress\",\"created\":\"$TIMESTAMP\"}"
+echo "$WORKFLOW_ENTRY" >> "$WORKFLOW_FILE"
+
+# Add to local.jsonl (not committed - local worktree path)
+LOCAL_ENTRY="{\"folder\":\"$FOLDER_NAME\",\"repo\":\"$REPO\",\"branch\":\"$BRANCH\"}"
+echo "$LOCAL_ENTRY" >> "$LOCAL_FILE"
 
 echo "Done. Worktree created at: $WORKTREE_DIR"

@@ -7,8 +7,8 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
-PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
-MANIFEST="$SAILKIT_DIR/manifest.jsonl"
+WORKSPACE_DIR="$(dirname "$SAILKIT_DIR")"
+LOCAL_FILE="$WORKSPACE_DIR/local.jsonl"
 
 QUIET=false
 if [ "$1" = "--quiet" ]; then
@@ -37,7 +37,7 @@ while IFS= read -r line; do
             VIOLATIONS=$((VIOLATIONS + 1))
         fi
     fi
-done < "$MANIFEST"
+done < "$LOCAL_FILE"
 
 if [ $VIOLATIONS -eq 0 ]; then
     if [ "$QUIET" = false ]; then
