@@ -39,18 +39,22 @@ fi
 # Create target directory
 mkdir -p "$TARGET_DIR"
 
-# Create symlink for worktree skill
-SKILL_LINK="$TARGET_DIR/worktree"
-if [ -L "$SKILL_LINK" ]; then
-    echo "Removing existing symlink: $SKILL_LINK"
-    rm "$SKILL_LINK"
-elif [ -e "$SKILL_LINK" ]; then
-    echo "Error: $SKILL_LINK exists and is not a symlink"
-    exit 1
-fi
+# Create symlinks for all skills
+for skill_dir in "$SAILKIT_DIR/skills"/*/; do
+    skill_name=$(basename "$skill_dir")
+    SKILL_LINK="$TARGET_DIR/$skill_name"
 
-ln -s "$SAILKIT_DIR/skills/worktree" "$SKILL_LINK"
-echo "Created symlink: $SKILL_LINK -> $SAILKIT_DIR/skills/worktree"
+    if [ -L "$SKILL_LINK" ]; then
+        echo "Removing existing symlink: $SKILL_LINK"
+        rm "$SKILL_LINK"
+    elif [ -e "$SKILL_LINK" ]; then
+        echo "Error: $SKILL_LINK exists and is not a symlink"
+        exit 1
+    fi
+
+    ln -s "$skill_dir" "$SKILL_LINK"
+    echo "Created symlink: $SKILL_LINK -> $skill_dir"
+done
 
 # Add scripts to PATH suggestion
 echo ""

@@ -2,7 +2,7 @@
 {"folder":"bearing-dev-atlas-magic-links","repo":"bearing-dev","branch":"atlas-magic-links","base":false,"basedOn":"unknown","created":"2025-12-20T10:57:10Z"}
 {"folder":"bearing-dev-kbd-hints","repo":"bearing-dev","branch":"kbd-hints","base":false,"basedOn":"unknown","created":"2025-12-20T11:00:48Z"}
 {"folder":"bearing-dev-lighthouse-404","repo":"bearing-dev","branch":"lighthouse-404","base":false,"basedOn":"unknown","created":"2025-12-20T11:26:35Z"}
-{"folder":"fightingwithai.com","repo":"fightingwithai.com","branch":"main","base":true,"created":"2025-12-20T11:10:09Z"}
+{"folder":"fightingwithai.com","repo":"fightingwithai.com","branch":"atlas-magic-links","base":true,"created":"2025-12-20T11:56:55Z"}
 {"folder":"fightingwithai-design-overhaul","repo":"fightingwithai.com","branch":"unknown","base":false,"basedOn":"unknown","created":"unknown"}
 {"folder":"fightingwithai.com-kbd-hints","repo":"fightingwithai.com","branch":"kbd-hints","base":false,"basedOn":"unknown","created":"2025-12-20T11:00:42Z"}
 {"folder":"fightingwithai.com-lighthouse-404","repo":"fightingwithai.com","branch":"lighthouse-404","base":false,"basedOn":"unknown","created":"2025-12-20T11:28:38Z"}

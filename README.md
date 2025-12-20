@@ -32,6 +32,7 @@ Run from your Projects folder:
 | `./sailkit-dev/scripts/worktree-sync` | Rebuild manifest from git state |
 | `./sailkit-dev/scripts/worktree-list` | Display manifest as ASCII table |
 | `./sailkit-dev/scripts/worktree-register <folder>` | Register existing folder as base |
+| `./sailkit-dev/scripts/worktree-check` | Validate invariants (base folders on main) |
 
 ### Options
 
@@ -58,3 +59,43 @@ Agents should interact via scripts, never edit the manifest directly.
 ```
 
 Runs 14 smoke tests covering all commands and the installer.
+
+## Hooks
+
+Sailkit can run checks automatically on session start. Add to `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/sailkit-dev/scripts/worktree-check --quiet"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The `--quiet` flag suppresses output when all invariants pass. Violations are always reported.
+
+## Slash Commands
+
+After install, these slash commands are available:
+
+| Command | Description |
+|---------|-------------|
+| `/worktree-status` | Check invariants and display worktree table |
+
+## Future Ideas
+
+Documented for future consideration:
+
+- **Auto-fix with --force**: `worktree-check --fix` to automatically checkout main on violating base folders. Would need `--force` flag to handle dirty working directories.
+- **Git hooks in repos**: Pre-checkout hooks in each repo's `.git/hooks/` to block unsafe branch switches. Requires meta-tooling to install hooks.
+- **Cross-repo coordination**: Track which agent owns which worktree to prevent conflicts.
+- **Platform testing**: CI that tests on Windows (path separators), different shells (fish, zsh, PowerShell).

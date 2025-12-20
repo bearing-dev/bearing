@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Validate worktree invariants
+# Usage: worktree-check [--quiet]
+# Exit codes: 0 = all good, 1 = violations found
+# --quiet: Only output if violations found (for hooks)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
+MANIFEST="$SAILKIT_DIR/manifest.jsonl"
+
+QUIET=false
+if [ "$1" = "--quiet" ]; then
+    QUIET=true
+fi
+
+VIOLATIONS=0
+VIOLATION_MESSAGES=""
+
+# First sync to get current state
+"$SCRIPT_DIR/worktree-sync" > /dev/null 2>&1
+
+if [ "$QUIET" = false ]; then
+    echo "Checking worktree invariants..."
+    echo ""
+fi
+
+while IFS= read -r line; do
+    folder=$(echo "$line" | sed -n 's/.*"folder":"\([^"]*\)".*/\1/p')
+    branch=$(echo "$line" | sed -n 's/.*"branch":"\([^"]*\)".*/\1/p')
+    base=$(echo "$line" | sed -n 's/.*"base":\([^,}]*\).*/\1/p')
+
+    if [ "$base" = "true" ]; then
+        if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
+            VIOLATION_MESSAGES="${VIOLATION_MESSAGES}✗ VIOLATION: Base folder '$folder' is on '$branch' (expected: main)\n"
+            VIOLATIONS=$((VIOLATIONS + 1))
+        fi
+    fi
+done < "$MANIFEST"
+
+if [ $VIOLATIONS -eq 0 ]; then
+    if [ "$QUIET" = false ]; then
+        echo "✓ All invariants satisfied"
+    fi
+    exit 0
+else
+    # Always output violations, even in quiet mode
+    echo "⚠️  SAILKIT: Worktree invariant violations detected!"
+    echo ""
+    printf "$VIOLATION_MESSAGES"
+    echo ""
+    echo "Found $VIOLATIONS violation(s). Fix with: git -C <folder> checkout main"
+    exit 1
+fi
