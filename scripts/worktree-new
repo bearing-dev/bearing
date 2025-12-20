@@ -2,20 +2,46 @@
 set -e
 
 # Create a new worktree for a repo/branch combination
-# Usage: wt-new <repo> <branch>
+# Usage: worktree-new <repo> <branch> [--based-on <branch>] [--purpose <text>]
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
 PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
+MANIFEST="$SAILKIT_DIR/manifest.jsonl"
 
-if [ $# -lt 2 ]; then
-    echo "Usage: wt-new <repo> <branch>"
-    echo "Example: wt-new fightingwithai.com feature-branch"
+# Parse arguments
+REPO=""
+BRANCH=""
+BASED_ON="main"
+PURPOSE=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --based-on)
+            BASED_ON="$2"
+            shift 2
+            ;;
+        --purpose)
+            PURPOSE="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$REPO" ]; then
+                REPO="$1"
+            elif [ -z "$BRANCH" ]; then
+                BRANCH="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$REPO" ] || [ -z "$BRANCH" ]; then
+    echo "Usage: worktree-new <repo> <branch> [--based-on <branch>] [--purpose <text>]"
+    echo "Example: worktree-new fightingwithai.com feature-branch --purpose 'Add login'"
     exit 1
 fi
 
-REPO="$1"
-BRANCH="$2"
 REPO_DIR="$PROJECTS_DIR/$REPO"
 WORKTREE_DIR="$PROJECTS_DIR/$REPO-$BRANCH"
 
@@ -31,12 +57,13 @@ fi
 
 echo "Creating worktree: $WORKTREE_DIR"
 git -C "$REPO_DIR" worktree add "$WORKTREE_DIR" "$BRANCH" 2>/dev/null || \
-git -C "$REPO_DIR" worktree add -b "$BRANCH" "$WORKTREE_DIR"
+git -C "$REPO_DIR" worktree add -b "$BRANCH" "$WORKTREE_DIR" "$BASED_ON"
 
-# Update manifest
-MANIFEST="$SAILKIT_DIR/WORKTREES.md"
-TODAY=$(date +%Y-%m-%d)
-echo "| \`$REPO-$BRANCH\` | $REPO | $BRANCH | $TODAY |" >> "$MANIFEST"
+# Append to manifest
+ENTRY=$(cat <<EOF
+{"folder":"$REPO-$BRANCH","repo":"$REPO","branch":"$BRANCH","base":false,"basedOn":"$BASED_ON","purpose":"$PURPOSE","created":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+EOF
+)
+echo "$ENTRY" >> "$MANIFEST"
 
 echo "Done. Worktree created at: $WORKTREE_DIR"
-echo "Manifest updated: $MANIFEST"

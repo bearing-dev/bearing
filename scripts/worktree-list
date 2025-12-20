@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Display manifest as ASCII table
+# Usage: worktree-list
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
+MANIFEST="$SAILKIT_DIR/manifest.jsonl"
+
+if [ ! -f "$MANIFEST" ] || [ ! -s "$MANIFEST" ]; then
+    echo "No worktrees registered. Run worktree-sync to scan existing folders."
+    exit 0
+fi
+
+# Print header
+printf "%-40s %-25s %-20s %-6s %-15s\n" "FOLDER" "REPO" "BRANCH" "BASE" "BASED_ON"
+printf "%-40s %-25s %-20s %-6s %-15s\n" "------" "----" "------" "----" "--------"
+
+# Parse JSONL and print rows
+while IFS= read -r line; do
+    folder=$(echo "$line" | sed -n 's/.*"folder":"\([^"]*\)".*/\1/p')
+    repo=$(echo "$line" | sed -n 's/.*"repo":"\([^"]*\)".*/\1/p')
+    branch=$(echo "$line" | sed -n 's/.*"branch":"\([^"]*\)".*/\1/p')
+    base=$(echo "$line" | sed -n 's/.*"base":\([^,}]*\).*/\1/p')
+    basedOn=$(echo "$line" | sed -n 's/.*"basedOn":"\([^"]*\)".*/\1/p')
+
+    if [ "$base" = "true" ]; then
+        base_display="yes"
+        basedOn="-"
+    else
+        base_display="no"
+        [ -z "$basedOn" ] && basedOn="unknown"
+    fi
+
+    printf "%-40s %-25s %-20s %-6s %-15s\n" "$folder" "$repo" "$branch" "$base_display" "$basedOn"
+done < "$MANIFEST"

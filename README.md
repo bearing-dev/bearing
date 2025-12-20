@@ -17,17 +17,39 @@ The installer prompts for scope (project-level or global) and creates symlinks t
 
 ## Concepts
 
-- **Base folders** (`fightingwithai.com/`, `bearing-dev/`) stay on `main`
-- **Worktrees** (`fightingwithai.com-feature/`) are created for tasks
-- **Manifest** (`WORKTREES.md`) tracks active worktrees across repos
+- **Base folders** (e.g., `fightingwithai.com/`) stay on `main`
+- **Worktrees** (e.g., `fightingwithai.com-feature/`) are created for tasks
+- **Manifest** (`manifest.jsonl`) tracks all folders, their purpose, and ancestry
 
 ## Commands
 
+Run from your Projects folder:
+
 | Command | Description |
 |---------|-------------|
-| `worktree-new <repo> <branch>` | Create worktree for branch |
-| `worktree-cleanup <repo> <branch>` | Remove worktree after merge |
-| `worktree-sync` | Update manifest from actual state |
+| `./sailkit-dev/scripts/worktree-new <repo> <branch>` | Create worktree for branch |
+| `./sailkit-dev/scripts/worktree-cleanup <repo> <branch>` | Remove worktree after merge |
+| `./sailkit-dev/scripts/worktree-sync` | Rebuild manifest from git state |
+| `./sailkit-dev/scripts/worktree-list` | Display manifest as ASCII table |
+| `./sailkit-dev/scripts/worktree-register <folder>` | Register existing folder as base |
+
+### Options
+
+```bash
+# Create worktree with metadata
+./sailkit-dev/scripts/worktree-new myrepo feature-x --based-on develop --purpose "Add login"
+```
+
+## Manifest
+
+The manifest (`manifest.jsonl`) is the source of truth. It's JSON-L format—one JSON object per line:
+
+```jsonl
+{"folder":"myrepo","repo":"myrepo","branch":"main","base":true}
+{"folder":"myrepo-feature","repo":"myrepo","branch":"feature","base":false,"basedOn":"main","purpose":"Add login"}
+```
+
+Agents should interact via scripts, never edit the manifest directly.
 
 ## Testing
 
@@ -35,8 +57,4 @@ The installer prompts for scope (project-level or global) and creates symlinks t
 ./test/smoke-test.sh
 ```
 
-Runs local smoke tests in a temp directory. Tests cover:
-- worktree-new creates worktree and updates manifest
-- worktree-cleanup removes worktree and updates manifest
-- worktree-sync discovers existing worktrees
-- install.sh creates correct symlinks
+Runs 14 smoke tests covering all commands and the installer.

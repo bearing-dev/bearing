@@ -1,0 +1,16 @@
+{"folder":"bearing-dev","repo":"bearing-dev","branch":"main","base":true,"created":"2025-12-20T11:26:13Z"}
+{"folder":"bearing-dev-atlas-magic-links","repo":"bearing-dev","branch":"atlas-magic-links","base":false,"basedOn":"unknown","created":"2025-12-20T10:57:10Z"}
+{"folder":"bearing-dev-kbd-hints","repo":"bearing-dev","branch":"kbd-hints","base":false,"basedOn":"unknown","created":"2025-12-20T11:00:48Z"}
+{"folder":"bearing-dev-lighthouse-404","repo":"bearing-dev","branch":"lighthouse-404","base":false,"basedOn":"unknown","created":"2025-12-20T11:26:35Z"}
+{"folder":"fightingwithai.com","repo":"fightingwithai.com","branch":"main","base":true,"created":"2025-12-20T11:10:09Z"}
+{"folder":"fightingwithai-design-overhaul","repo":"fightingwithai.com","branch":"unknown","base":false,"basedOn":"unknown","created":"unknown"}
+{"folder":"fightingwithai.com-kbd-hints","repo":"fightingwithai.com","branch":"kbd-hints","base":false,"basedOn":"unknown","created":"2025-12-20T11:00:42Z"}
+{"folder":"fightingwithai.com-lighthouse-404","repo":"fightingwithai.com","branch":"lighthouse-404","base":false,"basedOn":"unknown","created":"2025-12-20T11:28:38Z"}
+{"folder":"fightingwithai.com-revert-claude-code-review","repo":"fightingwithai.com","branch":"revert-claude-code-review","base":false,"basedOn":"unknown","created":"2025-12-20T11:13:18Z"}
+{"folder":"laplayawatch.com-astro","repo":"laplayawatch.com-astro","branch":"refactor/container-presentation-architecture","base":true,"created":"2025-11-27T15:24:43Z"}
+{"folder":"portfolio","repo":"portfolio","branch":"add-links","base":true,"created":"2025-12-13T15:39:54Z"}
+{"folder":"surfdeeper","repo":"surfdeeper","branch":"feature/board-trim-nuance","base":true,"created":"2025-10-13T22:23:16Z"}
+{"folder":"surfing-game","repo":"surfing-game","branch":"3js","base":true,"created":"2025-11-30T20:17:54Z"}
+{"folder":"surfing-game-wt-agentic-workflow","repo":"surfing-game","branch":"unknown","base":false,"basedOn":"unknown","created":"2025-11-29T16:18:21Z"}
+{"folder":"surfing-game-wt-ci-setup","repo":"surfing-game","branch":"unknown","base":false,"basedOn":"unknown","created":"2025-11-30T13:13:07Z"}
+{"folder":"surfing-game-wt-monorepo","repo":"surfing-game","branch":"unknown","base":false,"basedOn":"unknown","created":"2025-11-30T12:03:13Z"}

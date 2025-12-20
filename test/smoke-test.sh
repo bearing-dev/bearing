@@ -36,6 +36,9 @@ setup() {
     # Copy sailkit
     cp -r "$SAILKIT_DIR" "$TEST_DIR/sailkit-dev"
 
+    # Clear manifest
+    > "$TEST_DIR/sailkit-dev/manifest.jsonl"
+
     # Create a test repo
     git init --initial-branch=main "$TEST_DIR/test-repo" >/dev/null 2>&1
     echo "test" > "$TEST_DIR/test-repo/file.txt"
@@ -48,7 +51,7 @@ test_worktree_new() {
     log "Testing worktree-new"
 
     cd "$TEST_DIR"
-    ./sailkit-dev/scripts/worktree-new test-repo feature-branch >/dev/null 2>&1
+    ./sailkit-dev/scripts/worktree-new test-repo feature-branch --purpose "Test feature" >/dev/null 2>&1
 
     if [ -d "$TEST_DIR/test-repo-feature-branch" ]; then
         pass "Worktree directory created"
@@ -62,10 +65,16 @@ test_worktree_new() {
         fail "Worktree not on correct branch"
     fi
 
-    if grep -q "test-repo-feature-branch" "$TEST_DIR/sailkit-dev/WORKTREES.md"; then
-        pass "Manifest updated"
+    if grep -q '"folder":"test-repo-feature-branch"' "$TEST_DIR/sailkit-dev/manifest.jsonl"; then
+        pass "Manifest updated (JSONL)"
     else
         fail "Manifest not updated"
+    fi
+
+    if grep -q '"purpose":"Test feature"' "$TEST_DIR/sailkit-dev/manifest.jsonl"; then
+        pass "Purpose recorded in manifest"
+    else
+        fail "Purpose not recorded"
     fi
 }
 
@@ -82,18 +91,41 @@ test_worktree_cleanup() {
         fail "Worktree directory not removed"
     fi
 
-    if ! grep -q "test-repo-feature-branch" "$TEST_DIR/sailkit-dev/WORKTREES.md"; then
+    if ! grep -q '"folder":"test-repo-feature-branch"' "$TEST_DIR/sailkit-dev/manifest.jsonl"; then
         pass "Manifest entry removed"
     else
         fail "Manifest entry not removed"
     fi
 }
 
-# Test: worktree-sync updates manifest
+# Test: worktree-register adds base repo
+test_worktree_register() {
+    log "Testing worktree-register"
+
+    cd "$TEST_DIR"
+    ./sailkit-dev/scripts/worktree-register test-repo >/dev/null 2>&1
+
+    if grep -q '"folder":"test-repo"' "$TEST_DIR/sailkit-dev/manifest.jsonl"; then
+        pass "Base repo registered"
+    else
+        fail "Base repo not registered"
+    fi
+
+    if grep -q '"base":true' "$TEST_DIR/sailkit-dev/manifest.jsonl"; then
+        pass "Marked as base"
+    else
+        fail "Not marked as base"
+    fi
+}
+
+# Test: worktree-sync discovers worktrees
 test_worktree_sync() {
     log "Testing worktree-sync"
 
     cd "$TEST_DIR"
+
+    # Clear manifest
+    > "$TEST_DIR/sailkit-dev/manifest.jsonl"
 
     # Manually create a worktree
     git -C "$TEST_DIR/test-repo" worktree add "$TEST_DIR/test-repo-manual-branch" -b manual-branch >/dev/null 2>&1
@@ -101,10 +133,36 @@ test_worktree_sync() {
     # Sync should find it
     ./sailkit-dev/scripts/worktree-sync >/dev/null 2>&1
 
-    if grep -q "test-repo-manual-branch" "$TEST_DIR/sailkit-dev/WORKTREES.md"; then
+    if grep -q '"folder":"test-repo-manual-branch"' "$TEST_DIR/sailkit-dev/manifest.jsonl"; then
         pass "Sync found manually created worktree"
     else
         fail "Sync did not find manually created worktree"
+    fi
+
+    if grep -q '"folder":"test-repo"' "$TEST_DIR/sailkit-dev/manifest.jsonl"; then
+        pass "Sync found base repo"
+    else
+        fail "Sync did not find base repo"
+    fi
+}
+
+# Test: worktree-list displays table
+test_worktree_list() {
+    log "Testing worktree-list"
+
+    cd "$TEST_DIR"
+    OUTPUT=$(./sailkit-dev/scripts/worktree-list 2>&1)
+
+    if echo "$OUTPUT" | grep -q "FOLDER"; then
+        pass "List shows header"
+    else
+        fail "List missing header"
+    fi
+
+    if echo "$OUTPUT" | grep -q "test-repo"; then
+        pass "List shows entries"
+    else
+        fail "List missing entries"
     fi
 }
 
@@ -132,7 +190,9 @@ test_install() {
 setup
 test_worktree_new
 test_worktree_cleanup
+test_worktree_register
 test_worktree_sync
+test_worktree_list
 test_install
 
 # Summary

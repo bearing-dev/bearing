@@ -2,15 +2,16 @@
 set -e
 
 # Remove a worktree after merge
-# Usage: wt-cleanup <repo> <branch>
+# Usage: worktree-cleanup <repo> <branch>
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
 PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
+MANIFEST="$SAILKIT_DIR/manifest.jsonl"
 
 if [ $# -lt 2 ]; then
-    echo "Usage: wt-cleanup <repo> <branch>"
-    echo "Example: wt-cleanup fightingwithai.com feature-branch"
+    echo "Usage: worktree-cleanup <repo> <branch>"
+    echo "Example: worktree-cleanup fightingwithai.com feature-branch"
     exit 1
 fi
 
@@ -18,6 +19,7 @@ REPO="$1"
 BRANCH="$2"
 REPO_DIR="$PROJECTS_DIR/$REPO"
 WORKTREE_DIR="$PROJECTS_DIR/$REPO-$BRANCH"
+FOLDER_NAME="$REPO-$BRANCH"
 
 if [ ! -d "$WORKTREE_DIR" ]; then
     echo "Error: Worktree not found: $WORKTREE_DIR"
@@ -27,13 +29,11 @@ fi
 echo "Removing worktree: $WORKTREE_DIR"
 git -C "$REPO_DIR" worktree remove "$WORKTREE_DIR"
 
-# Update manifest (remove line containing the worktree)
-MANIFEST="$SAILKIT_DIR/WORKTREES.md"
+# Remove from manifest (filter out matching folder)
 if [ -f "$MANIFEST" ]; then
-    # Use temp file for portability
-    grep -v "\`$REPO-$BRANCH\`" "$MANIFEST" > "$MANIFEST.tmp" || true
+    grep -v "\"folder\":\"$FOLDER_NAME\"" "$MANIFEST" > "$MANIFEST.tmp" || true
     mv "$MANIFEST.tmp" "$MANIFEST"
-    echo "Manifest updated: removed $REPO-$BRANCH"
+    echo "Manifest updated: removed $FOLDER_NAME"
 fi
 
 echo "Done."
