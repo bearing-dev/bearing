@@ -27,13 +27,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
 	}
 
-	if err := state.RemoveLocal(folder); err != nil {
-		fmt.Fprintf(os.Stderr, "Error updating local.jsonl: %v\n", err)
+	if err := state.Remove(folder); err != nil {
+		fmt.Fprintf(os.Stderr, "Error updating state: %v\n", err)
 	}
 
-	if err := state.UpdateWorkflowStatus(repo, branch, "completed"); err != nil {
-		fmt.Fprintf(os.Stderr, "Error updating workflow.jsonl: %v\n", err)
-	}
-
-	fmt.Printf("Cleaned up worktree: %s-%s\n", repo, branch)
+	fmt.Printf("Cleaned up worktree: %s\n", folder)
 }

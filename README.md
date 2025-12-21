@@ -32,14 +32,9 @@ worktree-check --json              # JSON output for hooks
 - **Base folders** (e.g., `myrepo/`) stay on `main`
 - **Worktrees** (e.g., `myrepo-feature/`) are created for tasks
 
-## State Files
+## State File
 
-**workflow.jsonl** (committable):
-```jsonl
-{"repo":"myrepo","branch":"feature","status":"in_progress"}
-```
-
-**local.jsonl** (not committed):
+**worktrees.jsonl** (at workspace root):
 ```jsonl
 {"folder":"myrepo","repo":"myrepo","branch":"main","base":true}
 {"folder":"myrepo-feature","repo":"myrepo","branch":"feature","base":false}

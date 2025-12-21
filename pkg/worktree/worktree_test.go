@@ -20,9 +20,8 @@ func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 	root := t.TempDir()
 
-	// Create empty state files
-	os.WriteFile(filepath.Join(root, "local.jsonl"), nil, 0644)
-	os.WriteFile(filepath.Join(root, "workflow.jsonl"), nil, 0644)
+	// Create empty state file
+	os.WriteFile(filepath.Join(root, "worktrees.jsonl"), nil, 0644)
 
 	return &testEnv{
 		root:  root,
@@ -56,19 +55,19 @@ func run(t *testing.T, dir string, name string, args ...string) {
 
 // State tests
 
-func TestStateReadWriteLocal(t *testing.T) {
+func TestStateReadWrite(t *testing.T) {
 	env := newTestEnv(t)
 
-	entry := worktree.LocalEntry{
+	entry := worktree.Entry{
 		Folder: "test-repo",
 		Repo:   "test-repo",
 		Branch: "main",
 		Base:   true,
 	}
 
-	env.state.AppendLocal(entry)
+	env.state.Append(entry)
 
-	entries, err := env.state.ReadLocal()
+	entries, err := env.state.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,36 +79,13 @@ func TestStateReadWriteLocal(t *testing.T) {
 	}
 }
 
-func TestStateReadWriteWorkflow(t *testing.T) {
+func TestStateFind(t *testing.T) {
 	env := newTestEnv(t)
 
-	entry := worktree.WorkflowEntry{
-		Repo:   "test-repo",
-		Branch: "feature",
-		Status: "in_progress",
-	}
+	env.state.Append(worktree.Entry{Folder: "a", Repo: "a", Branch: "main", Base: true})
+	env.state.Append(worktree.Entry{Folder: "b", Repo: "b", Branch: "main", Base: true})
 
-	env.state.AppendWorkflow(entry)
-
-	entries, err := env.state.ReadWorkflow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entries) != 1 {
-		t.Fatalf("expected 1 entry, got %d", len(entries))
-	}
-	if entries[0].Status != "in_progress" {
-		t.Errorf("expected status in_progress, got %s", entries[0].Status)
-	}
-}
-
-func TestStateFindLocal(t *testing.T) {
-	env := newTestEnv(t)
-
-	env.state.AppendLocal(worktree.LocalEntry{Folder: "a", Repo: "a", Branch: "main", Base: true})
-	env.state.AppendLocal(worktree.LocalEntry{Folder: "b", Repo: "b", Branch: "main", Base: true})
-
-	found, _ := env.state.FindLocal("b")
+	found, _ := env.state.Find("b")
 	if found == nil {
 		t.Fatal("expected to find entry b")
 	}
@@ -117,39 +93,26 @@ func TestStateFindLocal(t *testing.T) {
 		t.Errorf("expected folder b, got %s", found.Folder)
 	}
 
-	notFound, _ := env.state.FindLocal("c")
+	notFound, _ := env.state.Find("c")
 	if notFound != nil {
 		t.Error("expected nil for non-existent entry")
 	}
 }
 
-func TestStateRemoveLocal(t *testing.T) {
+func TestStateRemove(t *testing.T) {
 	env := newTestEnv(t)
 
-	env.state.AppendLocal(worktree.LocalEntry{Folder: "a", Repo: "a", Branch: "main", Base: true})
-	env.state.AppendLocal(worktree.LocalEntry{Folder: "b", Repo: "b", Branch: "main", Base: true})
+	env.state.Append(worktree.Entry{Folder: "a", Repo: "a", Branch: "main", Base: true})
+	env.state.Append(worktree.Entry{Folder: "b", Repo: "b", Branch: "main", Base: true})
 
-	env.state.RemoveLocal("a")
+	env.state.Remove("a")
 
-	entries, _ := env.state.ReadLocal()
+	entries, _ := env.state.Read()
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 entry after removal, got %d", len(entries))
 	}
 	if entries[0].Folder != "b" {
 		t.Errorf("expected folder b to remain, got %s", entries[0].Folder)
-	}
-}
-
-func TestStateUpdateWorkflowStatus(t *testing.T) {
-	env := newTestEnv(t)
-
-	env.state.AppendWorkflow(worktree.WorkflowEntry{Repo: "test", Branch: "feat", Status: "in_progress"})
-
-	env.state.UpdateWorkflowStatus("test", "feat", "completed")
-
-	entry, _ := env.state.FindWorkflow("test", "feat")
-	if entry.Status != "completed" {
-		t.Errorf("expected status completed, got %s", entry.Status)
 	}
 }
 

@@ -7,22 +7,15 @@ import (
 	"path/filepath"
 )
 
-// LocalEntry represents a worktree on this machine
-type LocalEntry struct {
+// Entry represents a worktree or base repo
+type Entry struct {
 	Folder string `json:"folder"`
 	Repo   string `json:"repo"`
 	Branch string `json:"branch"`
 	Base   bool   `json:"base"`
 }
 
-// WorkflowEntry represents a branch being worked on (portable)
-type WorkflowEntry struct {
-	Repo   string `json:"repo"`
-	Branch string `json:"branch"`
-	Status string `json:"status"` // in_progress, completed
-}
-
-// State manages the JSONL state files
+// State manages the worktrees.jsonl state file
 type State struct {
 	root string
 }
@@ -32,47 +25,28 @@ func NewState(root string) *State {
 	return &State{root: root}
 }
 
-func (s *State) localPath() string {
-	return filepath.Join(s.root, "local.jsonl")
+func (s *State) path() string {
+	return filepath.Join(s.root, "worktrees.jsonl")
 }
 
-func (s *State) workflowPath() string {
-	return filepath.Join(s.root, "workflow.jsonl")
+// Read reads all entries
+func (s *State) Read() ([]Entry, error) {
+	return readJSONL[Entry](s.path())
 }
 
-// ReadLocal reads all local entries
-func (s *State) ReadLocal() ([]LocalEntry, error) {
-	return readJSONL[LocalEntry](s.localPath())
+// Write writes all entries
+func (s *State) Write(entries []Entry) error {
+	return writeJSONL(s.path(), entries)
 }
 
-// ReadWorkflow reads all workflow entries
-func (s *State) ReadWorkflow() ([]WorkflowEntry, error) {
-	return readJSONL[WorkflowEntry](s.workflowPath())
+// Append appends an entry
+func (s *State) Append(entry Entry) error {
+	return appendJSONL(s.path(), entry)
 }
 
-// WriteLocal writes all local entries
-func (s *State) WriteLocal(entries []LocalEntry) error {
-	return writeJSONL(s.localPath(), entries)
-}
-
-// WriteWorkflow writes all workflow entries
-func (s *State) WriteWorkflow(entries []WorkflowEntry) error {
-	return writeJSONL(s.workflowPath(), entries)
-}
-
-// AppendLocal appends a local entry
-func (s *State) AppendLocal(entry LocalEntry) error {
-	return appendJSONL(s.localPath(), entry)
-}
-
-// AppendWorkflow appends a workflow entry
-func (s *State) AppendWorkflow(entry WorkflowEntry) error {
-	return appendJSONL(s.workflowPath(), entry)
-}
-
-// FindLocal finds a local entry by folder name
-func (s *State) FindLocal(folder string) (*LocalEntry, error) {
-	entries, err := s.ReadLocal()
+// Find finds an entry by folder name
+func (s *State) Find(folder string) (*Entry, error) {
+	entries, err := s.Read()
 	if err != nil {
 		return nil, err
 	}
@@ -84,47 +58,19 @@ func (s *State) FindLocal(folder string) (*LocalEntry, error) {
 	return nil, nil
 }
 
-// FindWorkflow finds a workflow entry by repo and branch
-func (s *State) FindWorkflow(repo, branch string) (*WorkflowEntry, error) {
-	entries, err := s.ReadWorkflow()
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range entries {
-		if e.Repo == repo && e.Branch == branch {
-			return &e, nil
-		}
-	}
-	return nil, nil
-}
-
-// RemoveLocal removes a local entry by folder name
-func (s *State) RemoveLocal(folder string) error {
-	entries, err := s.ReadLocal()
+// Remove removes an entry by folder name
+func (s *State) Remove(folder string) error {
+	entries, err := s.Read()
 	if err != nil {
 		return err
 	}
-	var filtered []LocalEntry
+	var filtered []Entry
 	for _, e := range entries {
 		if e.Folder != folder {
 			filtered = append(filtered, e)
 		}
 	}
-	return s.WriteLocal(filtered)
-}
-
-// UpdateWorkflowStatus updates the status of a workflow entry
-func (s *State) UpdateWorkflowStatus(repo, branch, status string) error {
-	entries, err := s.ReadWorkflow()
-	if err != nil {
-		return err
-	}
-	for i, e := range entries {
-		if e.Repo == repo && e.Branch == branch {
-			entries[i].Status = status
-		}
-	}
-	return s.WriteWorkflow(entries)
+	return s.Write(filtered)
 }
 
 func readJSONL[T any](path string) ([]T, error) {

@@ -14,8 +14,8 @@ func main() {
 	git := worktree.NewGit(root)
 	state := worktree.NewState(root)
 
-	// Clear local.jsonl (will rebuild from git state)
-	state.WriteLocal(nil)
+	// Clear state (will rebuild from git)
+	state.Write(nil)
 
 	// Scan workspace for git repos
 	entries, err := os.ReadDir(root)
@@ -25,13 +25,10 @@ func main() {
 	}
 
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 		name := entry.Name()
-		if strings.HasPrefix(name, ".") {
-			continue
-		}
 
 		// Check if it's a git repo (has .git directory)
 		gitDir := filepath.Join(root, name, ".git")
@@ -42,7 +39,7 @@ func main() {
 
 		// It's a base repo
 		branch, _ := git.GetBranch(name)
-		state.AppendLocal(worktree.LocalEntry{
+		state.Append(worktree.Entry{
 			Folder: name,
 			Repo:   name,
 			Branch: branch,
@@ -61,7 +58,7 @@ func main() {
 				continue // Skip base repo itself
 			}
 			wtBranch, _ := git.GetBranch(wtName)
-			state.AppendLocal(worktree.LocalEntry{
+			state.Append(worktree.Entry{
 				Folder: wtName,
 				Repo:   name,
 				Branch: wtBranch,
@@ -70,5 +67,5 @@ func main() {
 		}
 	}
 
-	fmt.Println("Synced local.jsonl from git state")
+	fmt.Println("Synced worktrees.jsonl from git state")
 }

@@ -34,19 +34,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Update local.jsonl
-	state.AppendLocal(worktree.LocalEntry{
+	state.Append(worktree.Entry{
 		Folder: filepath.Base(wtPath),
 		Repo:   repo,
 		Branch: branch,
 		Base:   false,
-	})
-
-	// Update workflow.jsonl
-	state.AppendWorkflow(worktree.WorkflowEntry{
-		Repo:   repo,
-		Branch: branch,
-		Status: "in_progress",
 	})
 
 	fmt.Printf("Done. Worktree created at: %s\n", wtPath)

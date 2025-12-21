@@ -24,7 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	state.AppendLocal(worktree.LocalEntry{
+	state.Append(worktree.Entry{
 		Folder: folder,
 		Repo:   folder,
 		Branch: branch,

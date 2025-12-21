@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sailkit-dev/sailkit-dev/pkg/worktree"
 )
@@ -24,14 +25,14 @@ func main() {
 	git := worktree.NewGit(root)
 	state := worktree.NewState(root)
 
-	// Run sync first
+	// Sync state first
 	syncState(root, git, state)
 
 	// Check invariants
-	local, _ := state.ReadLocal()
+	entries, _ := state.Read()
 	var violations []string
 
-	for _, entry := range local {
+	for _, entry := range entries {
 		if entry.Base && !worktree.IsMainBranch(entry.Branch) {
 			violations = append(violations,
 				fmt.Sprintf("'%s' is on '%s' (should be main)", entry.Folder, entry.Branch))
@@ -64,20 +65,19 @@ func main() {
 }
 
 func syncState(root string, git *worktree.Git, state *worktree.State) {
-	// Simplified inline sync
-	state.WriteLocal(nil)
+	state.Write(nil)
 	entries, _ := os.ReadDir(root)
 	for _, entry := range entries {
-		if !entry.IsDir() || entry.Name()[0] == '.' {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
 		name := entry.Name()
-		gitDir := root + "/" + name + "/.git"
+		gitDir := filepath.Join(root, name, ".git")
 		if info, err := os.Stat(gitDir); err != nil || !info.IsDir() {
 			continue
 		}
 		branch, _ := git.GetBranch(name)
-		state.AppendLocal(worktree.LocalEntry{
+		state.Append(worktree.Entry{
 			Folder: name, Repo: name, Branch: branch, Base: true,
 		})
 		worktrees, _ := git.ListWorktrees(name)
@@ -87,7 +87,7 @@ func syncState(root string, git *worktree.Git, state *worktree.State) {
 				continue
 			}
 			wtBranch, _ := git.GetBranch(wtName)
-			state.AppendLocal(worktree.LocalEntry{
+			state.Append(worktree.Entry{
 				Folder: wtName, Repo: name, Branch: wtBranch, Base: false,
 			})
 		}
