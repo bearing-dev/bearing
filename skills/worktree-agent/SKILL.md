@@ -18,8 +18,8 @@ Use the Task tool with `subagent_type: "Explore"` and a focused prompt:
 Task: Check worktree status and report any issues
 
 Run these commands and summarize the results:
-1. worktree-check (or ./sailkit-dev/bin/worktree-check)
-2. worktree-list (or ./sailkit-dev/bin/worktree-list)
+1. worktree-check
+2. worktree-list
 
 Report:
 - Any base folders not on main (violations)
@@ -34,8 +34,8 @@ Task: Set up worktrees for feature X
 
 1. Run worktree-list to check current state
 2. Create worktrees:
-   - worktree-new bearing-dev feature-x
-   - worktree-new fightingwithai.com feature-x
+   - worktree-new repo-one feature-one
+   - worktree-new repo-two feature-one
 3. Report the created worktree paths
 ```
 
@@ -44,8 +44,8 @@ Task: Set up worktrees for feature X
 ```
 Task: Clean up worktrees for feature X
 
-1. Run worktree-cleanup bearing-dev feature-x
-2. Run worktree-cleanup fightingwithai.com feature-x
+1. Run worktree-cleanup repo-one feature-one
+2. Run worktree-cleanup repo-two feature-one
 3. Confirm cleanup completed
 ```
 
