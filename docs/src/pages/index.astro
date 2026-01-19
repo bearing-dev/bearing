@@ -1,3 +1,12 @@
 ---
-return Astro.redirect('/index/');
+import { getEntry } from 'astro:content';
+import DocsLayout from '../layouts/DocsLayout.astro';
+
+const entry = await getEntry('docs', 'index');
+if (!entry) throw new Error('Index page not found');
+const { Content } = await entry.render();
 ---
+
+<DocsLayout title={entry.data.title} slug="index">
+  <Content />
+</DocsLayout>
