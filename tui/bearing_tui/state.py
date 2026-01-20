@@ -1,10 +1,31 @@
 """Bearing state file reader for JSONL files."""
 
 import json
+import os
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
+
+
+def find_workspace_root(start_path: Path | None = None) -> Path | None:
+    """Walk up directory tree to find workspace root (contains local.jsonl or workflow.jsonl)."""
+    if start_path is None:
+        start_path = Path.cwd()
+
+    current = start_path.resolve()
+
+    # Walk up until we find state files or hit root
+    while current != current.parent:
+        if (current / "local.jsonl").exists() or (current / "workflow.jsonl").exists():
+            return current
+        current = current.parent
+
+    # Check root as well
+    if (current / "local.jsonl").exists() or (current / "workflow.jsonl").exists():
+        return current
+
+    return None
 
 
 @dataclass

@@ -4,7 +4,6 @@ from typing import Any
 
 from textual.widgets import Static
 from rich.text import Text
-from rich.panel import Panel
 
 
 @dataclass
@@ -37,16 +36,8 @@ class HealthEntry:
     pr_url: str | None = None
 
 
-class DetailsPanel(Static):
+class DetailsPanel(Static, can_focus=True):
     """Bottom panel showing details for selected worktree."""
-
-    DEFAULT_CSS = """
-    DetailsPanel {
-        height: 8;
-        border: solid $primary;
-        padding: 0 1;
-    }
-    """
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -58,8 +49,8 @@ class DetailsPanel(Static):
 
     def _show_empty(self) -> None:
         """Display empty state."""
-        text = Text("Select a worktree to view details", style="dim")
-        self.update(Panel(text, title="Details", border_style="dim"))
+        text = Text("Select a worktree to view details", style="dim italic")
+        self.update(text)
 
     def set_worktree(
         self,
@@ -76,53 +67,52 @@ class DetailsPanel(Static):
         text = Text()
 
         # Folder and branch
-        text.append("Folder: ", style="bold")
-        text.append(f"{local_entry.folder}\n")
-        text.append("Branch: ", style="bold")
-        text.append(f"{local_entry.branch}")
+        text.append("Folder: ", style="bold blue")
+        text.append(f"{local_entry.folder}\n", style="bright_white")
+        text.append("Branch: ", style="bold blue")
+        text.append(f"{local_entry.branch}", style="bright_white")
         if local_entry.base:
-            text.append(" ", style="bold")
-            text.append("\u2605 BASE", style="yellow")
+            text.append("  ")
+            text.append("\u2605 BASE", style="bold yellow")
         text.append("\n")
 
         # Workflow metadata
         if workflow_entry:
             if workflow_entry.purpose:
-                text.append("Purpose: ", style="bold")
-                text.append(f"{workflow_entry.purpose}\n")
+                text.append("Purpose: ", style="bold magenta")
+                text.append(f"{workflow_entry.purpose}\n", style="bright_white")
             if workflow_entry.based_on:
-                text.append("Based on: ", style="bold")
-                text.append(f"{workflow_entry.based_on}\n")
+                text.append("Based on: ", style="bold blue")
+                text.append(f"{workflow_entry.based_on}\n", style="dim")
             if workflow_entry.status:
-                status_style = "green" if workflow_entry.status == "completed" else "cyan"
-                text.append("Status: ", style="bold")
+                status_style = "bold green" if workflow_entry.status == "completed" else "bold cyan"
+                text.append("Status: ", style="bold blue")
                 text.append(f"{workflow_entry.status}\n", style=status_style)
 
         # Health status
         if health_entry:
-            text.append("Health: ", style="bold")
+            text.append("Health: ", style="bold cyan")
             parts = []
             if health_entry.dirty:
-                parts.append(Text("\u25cf dirty", style="yellow"))
+                parts.append(Text("\u25cf dirty", style="bold yellow"))
             if health_entry.unpushed:
-                parts.append(Text(f"{health_entry.unpushed} unpushed", style="cyan"))
+                parts.append(Text(f"\u2191 {health_entry.unpushed} unpushed", style="bold bright_cyan"))
             if health_entry.pr_state:
                 pr_style = {
-                    "open": "green",
-                    "merged": "magenta",
-                    "closed": "red"
-                }.get(health_entry.pr_state, "white")
-                parts.append(Text(f"PR: {health_entry.pr_state}", style=pr_style))
+                    "open": "bold green",
+                    "merged": "bold magenta",
+                    "closed": "bold red"
+                }.get(health_entry.pr_state.lower(), "white")
+                parts.append(Text(f"PR: {health_entry.pr_state.upper()}", style=pr_style))
             if parts:
                 for i, part in enumerate(parts):
                     if i > 0:
-                        text.append(" | ")
+                        text.append(" \u2022 ", style="dim")
                     text.append_text(part)
             else:
-                text.append("clean", style="green")
+                text.append("\u2714 clean", style="bold green")
 
-        title = f"Details - {local_entry.folder}"
-        self.update(Panel(text, title=title, border_style="blue"))
+        self.update(text)
 
     def clear(self) -> None:
         """Clear the details panel."""
