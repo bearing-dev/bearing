@@ -10,7 +10,7 @@ Remove a worktree after its branch has been merged.
 ## Usage
 
 ```bash
-./bearing/scripts/worktree-cleanup <repo> <branch>
+bearing worktree cleanup <repo> <branch>
 ```
 
 ## Arguments
@@ -23,7 +23,7 @@ Remove a worktree after its branch has been merged.
 ## Example
 
 ```bash
-./bearing/scripts/worktree-cleanup myapp feature-auth
+bearing worktree cleanup myapp feature-auth
 ```
 
 ## What It Does

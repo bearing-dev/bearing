@@ -10,7 +10,7 @@ Display the current workspace state as an ASCII table.
 ## Usage
 
 ```bash
-./bearing/scripts/worktree-list
+bearing worktree list
 ```
 
 ## Output

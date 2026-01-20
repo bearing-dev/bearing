@@ -38,7 +38,7 @@ If a base folder accidentally switched branches:
 
 ```bash
 # Check status
-./bearing/scripts/worktree-check
+bearing worktree check
 
 # Fix it
 git -C myapp checkout main

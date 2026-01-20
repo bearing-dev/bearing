@@ -50,7 +50,7 @@ Tracks local worktree folder paths:
 If state files get corrupted or out of sync:
 
 ```bash
-./bearing/scripts/worktree-sync
+bearing worktree sync
 ```
 
 This rebuilds `local.jsonl` from git state while preserving `workflow.jsonl` metadata.

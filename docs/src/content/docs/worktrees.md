@@ -34,7 +34,7 @@ myapp-feature-auth/       # Worktree (feature-auth branch)
 
 ```bash
 # Create worktree for a task
-./bearing/scripts/worktree-new myapp feature-auth
+bearing worktree new myapp feature-auth
 
 # Work in it
 cd myapp-feature-auth
@@ -42,7 +42,7 @@ git add . && git commit -m "Add auth"
 git push -u origin feature-auth
 
 # Clean up after merge
-./bearing/scripts/worktree-cleanup myapp feature-auth
+bearing worktree cleanup myapp feature-auth
 ```
 
 ## Git Commands (Under the Hood)

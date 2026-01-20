@@ -10,7 +10,7 @@ Validate that the workspace follows Bearing's invariants.
 ## Usage
 
 ```bash
-./bearing/scripts/worktree-check [options]
+bearing worktree check [options]
 ```
 
 ## Options
@@ -51,7 +51,7 @@ Use with Claude Code hooks to check invariants before each action:
     "UserPromptSubmit": [{
       "hooks": [{
         "type": "command",
-        "command": "\"$CLAUDE_PROJECT_DIR\"/bearing/scripts/worktree-check --json"
+        "command": "bearing worktree check --json"
       }]
     }]
   }
