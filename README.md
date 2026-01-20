@@ -16,8 +16,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.joshribakoff.com/blog/deliberate-ai-use/">📝 Read the blog post</a> •
-  <a href="https://bearing.dev">📖 Documentation</a> •
+  <a href="https://www.joshribakoff.com/blog/deliberate-ai-use/">📝 Blog Post</a> •
+  <a href="https://bearing.dev">📖 Docs</a> •
   <a href="#-quick-start">🚀 Quick Start</a>
 </p>
 
@@ -25,175 +25,87 @@
 
 ## ✨ Why Bearing?
 
-When multiple AI agents work on the same codebase, **they step on each other**. Branch switching in shared folders causes conflicts, lost work, and confusion.
+When multiple AI agents work on the same codebase, **they step on each other**. Branch switching in shared folders causes conflicts, lost work, and chaos.
 
-**Bearing enforces a worktree-per-task pattern** that keeps every agent isolated:
+**Bearing keeps every agent isolated** in its own worktree:
 
-- 🔒 **Isolation** — Each task gets its own directory. No conflicts.
-- 🚀 **Parallelism** — Run 10 Claude sessions on 10 features simultaneously
-- 📊 **Visibility** — See all active work at a glance
-- 🔄 **Workflow** — Track purpose, status, and relationships
-- ⚡ **Scale** — Thousands of worktrees across hundreds of repos
+- 🔒 **No Conflicts** — Each task gets its own directory
+- 🚀 **Parallel Work** — Run 10 Claude sessions on 10 features at once
+- 📊 **Full Visibility** — See all active work in one place
+- ⚡ **Massive Scale** — Thousands of worktrees across hundreds of repos
 
 ---
 
 ## 🖥️ Beautiful Terminal UI
 
-Inspired by lazygit, the Bearing TUI gives you full visibility into your workspace:
-
 ![Bearing TUI](docs/public/images/tui-screenshot.svg)
 
-**Features:**
-- 📁 Browse all projects and worktrees
-- 🎯 Vim-style navigation (`j/k`, `h/l`)
-- 📋 Numbered panel switching (like lazygit)
-- 🔍 Health status at a glance (dirty, unpushed, PR state)
-- 🌙 Darcula-inspired dark theme
-
-```bash
-# Install TUI (Python 3.10+)
-pip install bearing-tui
-
-# Run
-bearing-tui
-```
+Browse all your projects and worktrees. See health status at a glance. Vim-style navigation.
 
 ---
 
 ## 🚀 Quick Start
 
-### Install CLI
+### 1. Install
 
 ```bash
-# Clone and build
 git clone https://github.com/joshribakoff/bearing ~/Projects/bearing
-cd ~/Projects/bearing
-go build -o bearing ./cmd/bearing
-sudo mv bearing /usr/local/bin/
-
-# Initialize your workspace
-cd ~/Projects
-bearing init
+~/Projects/bearing/install.sh
 ```
 
-### Create Your First Worktree
+### 2. Talk to Claude
 
-```bash
-# Create a worktree for a new feature
-bearing worktree new myapp feature-auth
-
-# List all worktrees
-bearing worktree list
-
-# Clean up after merging
-bearing worktree cleanup myapp feature-auth
 ```
+> Create a worktree for the auth feature
+> What worktrees do I have?
+> Clean up the merged feature branch
+```
+
+That's it. Bearing integrates with Claude Code's hooks — just ask Claude to manage your worktrees.
 
 ---
 
 ## 📁 Workspace Layout
 
-Bearing uses a flat workspace structure for maximum visibility:
-
 ```
 ~/Projects/
-├── 📦 bearing/                 # Bearing itself
 ├── 📦 myapp/                   # Base folder (stays on main)
-├── 🔀 myapp-feature-auth/      # Worktree for auth feature
-├── 🔀 myapp-fix-bug-123/       # Worktree for bug fix
-├── 📦 other-project/           # Another base folder
-├── 🔀 other-project-refactor/  # Its worktree
-├── 📄 workflow.jsonl           # Workflow state (committable)
-└── 📄 local.jsonl              # Local worktree paths
+├── 🔀 myapp-feature-auth/      # Worktree for auth
+├── 🔀 myapp-fix-bug-42/        # Worktree for bug fix
+├── 📦 api-server/              # Another project
+├── 🔀 api-server-graphql/      # Its worktree
+└── 📄 workflow.jsonl           # Tracks all active work
 ```
 
-**Base folders stay on `main`**. Worktrees are created for each task. This scales to **thousands of worktrees**.
+**Base folders stay on `main`**. Worktrees are isolated per task.
 
 ---
 
-## 🛠️ Commands
+## 🛠️ CLI Commands
 
-| Command | Description |
+For when you want to run things manually:
+
+| Command | What it does |
 |---------|-------------|
-| `bearing worktree new <repo> <branch>` | 🆕 Create worktree for branch |
-| `bearing worktree cleanup <repo> <branch>` | 🧹 Remove worktree after merge |
-| `bearing worktree sync` | 🔄 Rebuild manifest from git |
-| `bearing worktree list` | 📋 Display ASCII table |
-| `bearing worktree status` | 📊 Show health (dirty, PR) |
-| `bearing worktree check` | ✅ Validate invariants |
-| `bearing daemon start` | 👻 Start health monitor |
-
----
-
-## 🤖 Claude Code Integration
-
-Bearing integrates with Claude Code's hook system:
-
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [{
-      "hooks": [{
-        "type": "command",
-        "command": "bearing worktree check --json"
-      }]
-    }]
-  }
-}
-```
-
-**What it does:**
-- ✅ Checks invariants before every Claude action
-- ⚠️ Warns when base folders drift from main
-- 🔧 Claude can auto-fix violations
-
----
-
-## 🏗️ Architecture
-
-| Layer | Responsibility |
-|-------|----------------|
-| **Git** | Source of truth (submodules, worktrees) |
-| **Manifest** | Workflow metadata (`workflow.jsonl`) |
-| **CLI** | Orchestration & guardrails |
-| **Daemon** | Background health monitoring |
-| **TUI** | Visual workspace browser |
-
----
-
-## 📊 State Files
-
-**workflow.jsonl** (committable):
-```jsonl
-{"repo":"myapp","branch":"feature","purpose":"Add auth","status":"in_progress"}
-```
-
-**local.jsonl** (local only):
-```jsonl
-{"folder":"myapp-feature","repo":"myapp","branch":"feature","base":false}
-```
-
----
-
-## 🧪 Testing
-
-```bash
-# Go tests
-go test ./...
-
-# TUI tests
-cd tui && make test
-```
+| `bearing worktree new myapp feature` | Create a worktree |
+| `bearing worktree list` | See all worktrees |
+| `bearing worktree cleanup myapp feature` | Remove after merge |
+| `bearing worktree status` | Health check (dirty, PRs) |
+| `bearing-tui` | Launch the terminal UI |
 
 ---
 
 ## 📚 Learn More
 
-- 📖 [Full Documentation](https://bearing.dev)
-- 📝 [Blog Post: Deliberate AI Use](https://www.joshribakoff.com/blog/deliberate-ai-use/)
-- 🐛 [Report Issues](https://github.com/joshribakoff/bearing/issues)
+- 📖 **[Full Documentation](https://bearing.dev)** — Complete guides and reference
+- 📝 **[Blog Post](https://www.joshribakoff.com/blog/deliberate-ai-use/)** — The philosophy behind Bearing
+- 🐛 **[Report Issues](https://github.com/joshribakoff/bearing/issues)** — Help us improve
 
 ---
+
+---
+
+> ⚠️ **Fair Warning:** This thing was vibe-coded in an afternoon, rewritten in Go the same day, and had a TUI bolted on for good measure. The AI agent that built it dangerously skips permissions and merges its own PRs. Depend on it at your own peril. 🏴‍☠️
 
 <p align="center">
   Made with ⚓ for the AI-assisted development era
