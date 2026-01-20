@@ -73,8 +73,8 @@ func TestWorktreeAddRemove(t *testing.T) {
 
 	worktreePath := filepath.Join(filepath.Dir(repoPath), "worktree-feature")
 
-	// Add worktree
-	if err := repo.WorktreeAdd(worktreePath, "feature"); err != nil {
+	// Add worktree (empty startPoint means create new branch from current HEAD)
+	if err := repo.WorktreeAdd(worktreePath, "feature", ""); err != nil {
 		t.Fatalf("WorktreeAdd failed: %v", err)
 	}
 
