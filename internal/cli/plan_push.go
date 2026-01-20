@@ -2,8 +2,11 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -38,6 +41,16 @@ func runPlanPush(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if fm.Issue == "" {
+		return fmt.Errorf("no issue number in frontmatter")
+	}
+	if fm.Repo == "" {
+		return fmt.Errorf("no repo in frontmatter")
+	}
+
+	// Trim leading/trailing whitespace from body
+	body = strings.TrimSpace(body)
+
 	if planPushDryRun {
 		fmt.Printf("Would update issue %s in %s:\n", fm.Issue, fm.Repo)
 		fmt.Printf("Status: %s\n", fm.Status)
@@ -45,9 +58,18 @@ func runPlanPush(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// TODO: Implement actual push via gh api
-	fmt.Printf("Pushing to issue %s in %s...\n", fm.Issue, fm.Repo)
-	fmt.Println("(Push not yet implemented)")
+	// Push to GitHub using gh issue edit
+	repoPath := filepath.Join(WorkspaceDir(), fm.Repo)
+	ghCmd := exec.Command("gh", "issue", "edit", fm.Issue, "--body", body)
+	ghCmd.Dir = repoPath
+	var stderr bytes.Buffer
+	ghCmd.Stderr = &stderr
+
+	if err := ghCmd.Run(); err != nil {
+		return fmt.Errorf("failed to update issue: %w\n%s", err, stderr.String())
+	}
+
+	fmt.Printf("Updated issue %s in %s\n", fm.Issue, fm.Repo)
 	return nil
 }
 

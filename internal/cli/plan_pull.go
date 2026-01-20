@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,12 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+type ghIssue struct {
+	Title  string `json:"title"`
+	Body   string `json:"body"`
+	Number int    `json:"number"`
+}
 
 var planPullCmd = &cobra.Command{
 	Use:   "pull <repo> <issue>",
@@ -23,20 +30,23 @@ func init() {
 
 func runPlanPull(cmd *cobra.Command, args []string) error {
 	repo := args[0]
-	issue := args[1]
+	issueNum := args[1]
 
 	repoPath := filepath.Join(WorkspaceDir(), repo)
 
 	// Fetch issue details using gh
-	ghCmd := exec.Command("gh", "issue", "view", issue, "--json", "title,body,labels")
+	ghCmd := exec.Command("gh", "issue", "view", issueNum, "--json", "title,body,number")
 	ghCmd.Dir = repoPath
 	output, err := ghCmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed to fetch issue: %w", err)
 	}
 
-	// Parse issue (simplified - just extract title/body)
-	issueStr := string(output)
+	// Parse JSON response
+	var issue ghIssue
+	if err := json.Unmarshal(output, &issue); err != nil {
+		return fmt.Errorf("failed to parse issue JSON: %w", err)
+	}
 
 	// Create plan file
 	planDir := filepath.Join(WorkspaceDir(), "plans", repo)
@@ -44,7 +54,7 @@ func runPlanPull(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	planFile := filepath.Join(planDir, fmt.Sprintf("%s.md", sanitizeFilename(issue)))
+	planFile := filepath.Join(planDir, fmt.Sprintf("%s.md", sanitizeFilename(issueNum)))
 
 	content := fmt.Sprintf(`---
 issue: %s
@@ -52,10 +62,10 @@ repo: %s
 status: draft
 ---
 
-# Issue %s
+# %s
 
 %s
-`, issue, repo, issue, issueStr)
+`, issueNum, repo, issue.Title, issue.Body)
 
 	if err := os.WriteFile(planFile, []byte(content), 0644); err != nil {
 		return err
