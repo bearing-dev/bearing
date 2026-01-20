@@ -33,6 +33,17 @@ func runWorktreeNew(cmd *cobra.Command, args []string) error {
 	repoName := args[0]
 	branch := args[1]
 
+	// Validate arguments
+	if strings.TrimSpace(repoName) == "" {
+		return fmt.Errorf("repo name cannot be empty")
+	}
+	if strings.TrimSpace(branch) == "" {
+		return fmt.Errorf("branch name cannot be empty")
+	}
+	if strings.HasPrefix(branch, "-") {
+		return fmt.Errorf("branch name cannot start with a hyphen")
+	}
+
 	// Sanitize branch name for folder (replace / with -)
 	folderBranch := strings.ReplaceAll(branch, "/", "-")
 	folderName := fmt.Sprintf("%s-%s", repoName, folderBranch)

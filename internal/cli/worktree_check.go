@@ -17,7 +17,7 @@ var (
 )
 
 var worktreeCheckCmd = &cobra.Command{
-	Use:   "check",
+	Use:   "check [folder...]",
 	Short: "Check worktree health",
 	RunE:  runWorktreeCheck,
 }
@@ -39,6 +39,23 @@ func runWorktreeCheck(cmd *cobra.Command, args []string) error {
 	entries, err := store.ReadLocal()
 	if err != nil {
 		return err
+	}
+
+	// If specific folders are requested, filter to those
+	if len(args) > 0 {
+		registeredFolders := make(map[string]jsonl.LocalEntry)
+		for _, e := range entries {
+			registeredFolders[e.Folder] = e
+		}
+		var filtered []jsonl.LocalEntry
+		for _, folder := range args {
+			if e, ok := registeredFolders[folder]; ok {
+				filtered = append(filtered, e)
+			} else {
+				return fmt.Errorf("folder not registered: %s", folder)
+			}
+		}
+		entries = filtered
 	}
 
 	var results []checkResult

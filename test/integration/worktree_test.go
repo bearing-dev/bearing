@@ -165,3 +165,63 @@ func TestBinaryExists(t *testing.T) {
 		t.Skip("bearing binary not in PATH - run 'make build' first")
 	}
 }
+
+func TestWorktreeNewEmptyArgs(t *testing.T) {
+	t.Setenv("BEARING_AI_ENABLED", "0")
+	tmpDir := t.TempDir()
+
+	testutil.CreateTestRepo(t, tmpDir, "test-repo")
+	testutil.InitWorkspace(t, tmpDir)
+
+	// Empty branch should fail
+	output, err := testutil.RunBearing(t, tmpDir, "worktree", "new", "test-repo", "")
+	if err == nil {
+		t.Errorf("expected error for empty branch, got success: %s", output)
+	}
+
+	// Branch starting with hyphen should fail
+	output, err = testutil.RunBearing(t, tmpDir, "worktree", "new", "test-repo", "-bad-branch")
+	if err == nil {
+		t.Errorf("expected error for hyphen-prefixed branch, got success: %s", output)
+	}
+}
+
+func TestWorktreeRegisterDuplicate(t *testing.T) {
+	t.Setenv("BEARING_AI_ENABLED", "0")
+	tmpDir := t.TempDir()
+
+	testutil.CreateTestRepo(t, tmpDir, "test-repo")
+	testutil.InitWorkspace(t, tmpDir)
+
+	// Register once
+	_, err := testutil.RunBearing(t, tmpDir, "worktree", "register", "test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register again - should succeed but not duplicate
+	output, err := testutil.RunBearing(t, tmpDir, "worktree", "register", "test-repo")
+	if err != nil {
+		t.Fatalf("duplicate register failed: %v\nOutput: %s", err, output)
+	}
+
+	// Verify only 1 entry
+	store := jsonl.NewStore(tmpDir)
+	locals, _ := store.ReadLocal()
+	if len(locals) != 1 {
+		t.Errorf("expected 1 entry after duplicate register, got %d", len(locals))
+	}
+}
+
+func TestWorktreeCheckNonExistentFolder(t *testing.T) {
+	t.Setenv("BEARING_AI_ENABLED", "0")
+	tmpDir := t.TempDir()
+
+	testutil.InitWorkspace(t, tmpDir)
+
+	// Check a folder that isn't registered
+	output, err := testutil.RunBearing(t, tmpDir, "worktree", "check", "nonexistent-folder")
+	if err == nil {
+		t.Errorf("expected error for non-existent folder, got success: %s", output)
+	}
+}

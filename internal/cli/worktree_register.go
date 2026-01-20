@@ -26,6 +26,18 @@ func runWorktreeRegister(cmd *cobra.Command, args []string) error {
 	folderPath := filepath.Join(WorkspaceDir(), folder)
 	store := jsonl.NewStore(WorkspaceDir())
 
+	// Check if already registered
+	entries, err := store.ReadLocal()
+	if err != nil {
+		return fmt.Errorf("failed to read local.jsonl: %w", err)
+	}
+	for _, e := range entries {
+		if e.Folder == folder {
+			fmt.Printf("Already registered: %s\n", folder)
+			return nil
+		}
+	}
+
 	repo := git.NewRepo(folderPath)
 
 	// Get current branch
