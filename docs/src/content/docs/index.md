@@ -6,18 +6,22 @@ description: Worktree-based workflow for parallel AI-assisted development
 # Bearing
 
 :::caution[Experimental]
-Bearing is experimental software being developed live on [YouTube](https://youtube.com/@joshribakoff). Expect breaking changes.
+Bearing is experimental software. Expect breaking changes.
 :::
 
 Worktree-based workflow for parallel AI-assisted development.
 
 ## The Problem
 
-Multiple AI agents working on the same codebase step on each other when they switch branches in shared folders.
+Working across multiple repos and branches gets messy:
+- AI agents step on each other when switching branches in shared folders
+- You lose context switching between directories
+- Easy to accidentally work in the wrong folder (like the parent mono-workspace)
+- Hard to track what's in progress across dozens of repos
 
 ## The Solution
 
-Bearing enforces a **worktree-per-task** pattern. Each task gets its own isolated directory. No branch switching, no conflicts.
+Bearing enforces a **worktree-per-task** pattern with a flat mono-workspace layout. Each task gets its own isolated directory. No branch switching, no conflicts, no getting lost.
 
 ## Install
 
@@ -46,7 +50,9 @@ bearing worktree sync
 ├── myapp/                # Base folder (stays on main)
 ├── myapp-feature-auth/   # Worktree for feature
 ├── myapp-fix-bug/        # Worktree for bug fix
-└── workflow.jsonl        # Tracks active work
+├── other-repo/           # Another project
+├── other-repo-refactor/  # Its worktree
+└── workflow.jsonl        # Tracks active work across all repos
 ```
 
-Base folders stay on `main`. Worktrees are created for each task. This scales to 100+ worktrees.
+All projects live in one flat workspace. Base folders stay on `main`. Worktrees are created for each task. This scales to 100+ worktrees across dozens of repos.
