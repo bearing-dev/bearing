@@ -13,10 +13,10 @@ class ProjectListItem(ListItem):
         height: 1;
         padding: 0 1;
     }
-    ProjectListItem.--highlight {
+    ProjectListItem.-highlight {
         background: #264f78;
     }
-    ProjectListItem:focus.--highlight {
+    ProjectListItem:focus.-highlight {
         background: #2d5a8a;
     }
     """
@@ -41,16 +41,16 @@ class ProjectList(ListView):
     ProjectList {
         background: #252526;
     }
-    ProjectList > ProjectListItem.--highlight {
+    ProjectList > ProjectListItem.-highlight {
         background: #264f78;
     }
-    ProjectList:focus > ProjectListItem.--highlight {
+    ProjectList:focus > ProjectListItem.-highlight {
         background: #2d5a8a;
     }
-    ProjectList > ListItem.--highlight {
+    ProjectList > ListItem.-highlight {
         background: #264f78;
     }
-    ProjectList:focus > ListItem.--highlight {
+    ProjectList:focus > ListItem.-highlight {
         background: #2d5a8a;
     }
     """

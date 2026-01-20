@@ -117,13 +117,13 @@ ProjectList > ListItem:hover {
 }
 
 /* Highlighted item - always show with blue background */
-ProjectList ListItem.--highlight {
+ProjectList ListItem.-highlight {
     background: $bg-selection !important;
     color: $text-bright !important;
 }
 
 /* When focused, make it slightly brighter */
-ProjectList:focus ListItem.--highlight {
+ProjectList:focus ListItem.-highlight {
     background: #2d5a8a !important;
     color: $text-bright !important;
     text-style: bold;
