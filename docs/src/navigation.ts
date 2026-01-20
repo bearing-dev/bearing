@@ -9,6 +9,7 @@ export const navigation: NavItem[] = [
       'base-folders',
       'worktrees',
       'state-files',
+      'workflow-health',
     ],
   },
   {
@@ -16,6 +17,8 @@ export const navigation: NavItem[] = [
     children: [
       'worktree-new',
       'worktree-cleanup',
+      'worktree-recover',
+      'worktree-status',
       'worktree-sync',
       'worktree-list',
       'worktree-register',
@@ -27,6 +30,7 @@ export const navigation: NavItem[] = [
     children: [
       'claude-code-hooks',
       'slash-commands',
+      'plan-sync',
     ],
   },
 ];
@@ -37,6 +41,7 @@ export const titles: Record<string, string> = {
   'commands': 'Commands',
   'worktree-new': 'worktree-new',
   'worktree-cleanup': 'worktree-cleanup',
+  'worktree-recover': 'worktree-recover',
   'worktree-sync': 'worktree-sync',
   'worktree-list': 'worktree-list',
   'worktree-register': 'worktree-register',
@@ -45,9 +50,12 @@ export const titles: Record<string, string> = {
   'base-folders': 'Base Folders',
   'worktrees': 'Worktrees',
   'state-files': 'State Files',
+  'workflow-health': 'Workflow Health',
+  'worktree-status': 'worktree-status',
   'integration': 'Integration',
   'claude-code-hooks': 'Claude Code Hooks',
   'slash-commands': 'Slash Commands',
+  'plan-sync': 'Plan Sync',
 };
 
 export function getTitle(slug: string): string {
