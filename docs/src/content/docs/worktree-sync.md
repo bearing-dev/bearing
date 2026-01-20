@@ -10,7 +10,7 @@ Rebuild the manifest files from git state.
 ## Usage
 
 ```bash
-./bearing/scripts/worktree-sync
+bearing worktree sync
 ```
 
 ## When to Use
@@ -34,7 +34,7 @@ Run this after:
 # After cloning your workspace on a new machine
 git clone --recurse-submodules https://github.com/user/workspace.git
 cd workspace
-./bearing/scripts/worktree-sync
+bearing worktree sync
 ```
 
 ## Notes

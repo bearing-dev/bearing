@@ -10,7 +10,7 @@ Create a new worktree for a branch.
 ## Usage
 
 ```bash
-./bearing/scripts/worktree-new <repo> <branch> [options]
+bearing worktree new <repo> <branch> [flags]
 ```
 
 ## Arguments
@@ -31,10 +31,10 @@ Create a new worktree for a branch.
 
 ```bash
 # Basic usage
-./bearing/scripts/worktree-new myapp feature-auth
+bearing worktree new myapp feature-auth
 
 # With metadata
-./bearing/scripts/worktree-new myapp feature-auth \
+bearing worktree new myapp feature-auth \
   --based-on develop \
   --purpose "Add user authentication flow"
 ```

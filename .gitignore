@@ -1,0 +1,6 @@
+
+# Go build artifacts
+bearing
+coverage.out
+*.exe
+*.lock

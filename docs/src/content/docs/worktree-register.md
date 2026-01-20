@@ -10,7 +10,7 @@ Register an existing git repository folder as a base folder.
 ## Usage
 
 ```bash
-./bearing/scripts/worktree-register <folder>
+bearing worktree register <folder>
 ```
 
 ## Arguments
@@ -24,7 +24,7 @@ Register an existing git repository folder as a base folder.
 ```bash
 # Register a newly cloned repo
 git clone https://github.com/org/new-project.git
-./bearing/scripts/worktree-register new-project
+bearing worktree register new-project
 ```
 
 ## What It Does
