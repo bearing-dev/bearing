@@ -134,6 +134,53 @@ github_issue: 42
 
 Uses adapter pattern - implement `adapters/github.sh`, `adapters/linear.sh`, etc.
 
+## AI Features (Opt-in)
+
+Bearing can use Claude CLI (haiku model) for classification and summarization. **Disabled by default.**
+
+### Enable
+
+```bash
+# Option 1: Environment variable
+export BEARING_AI_ENABLED=1
+
+# Option 2: User config (~/.bearing)
+echo "ai_enabled: true" >> ~/.bearing
+
+# Option 3: Workspace config (.bearing.yaml)
+# ai:
+#   enabled: true
+```
+
+### Auto-Generated Purpose
+
+When creating worktrees, Bearing can auto-generate a purpose description from the branch name:
+
+```bash
+worktree-new myrepo feature-add-auth
+# Purpose auto-generated: "Add authentication flow"
+```
+
+Override with explicit `--purpose`:
+```bash
+worktree-new myrepo feature-add-auth --purpose "OAuth2 login"
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `bearing-ai summarize` | Summarize input text |
+| `bearing-ai branch-purpose` | Generate purpose from branch name |
+| `bearing-ai classify-priority` | Classify as P0/P1/P2/P3 |
+| `bearing-ai suggest-fix` | Suggest commands to fix issues |
+
+### Requirements
+
+- Claude CLI (`claude`) installed and authenticated
+- Opt-in enabled via config or env var
+- Uses haiku model for cost efficiency (~$0.0001 per call)
+
 ## Config
 
 `.bearing.yaml` defines the workspace:
