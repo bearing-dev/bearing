@@ -21,15 +21,14 @@ class ProjectList(ListView):
     """Left panel showing list of repos/projects."""
 
     DEFAULT_CSS = """
-    ProjectList {
-        width: 30;
-        border: solid $primary;
-    }
-    ProjectList > ListItem {
-        padding: 0 1;
-    }
     ProjectList > ListItem.--highlight {
-        background: $accent;
+        background: #264f78;
+        color: white;
+    }
+    ProjectList:focus > ListItem.--highlight {
+        background: #2d5a8a;
+        color: white;
+        text-style: bold;
     }
     """
 
@@ -44,13 +43,9 @@ class ProjectList(ListView):
         self.projects = projects or []
 
     def compose(self):
-        if not self.projects:
-            yield ListItem(Label("No projects found"), id="empty-state")
-        else:
-            for project in self.projects:
-                item = ProjectListItem(project, id=f"project-{_sanitize_id(project)}")
-                item.compose_add_child(Label(project))
-                yield item
+        # Don't yield anything here - set_projects will populate on mount
+        return
+        yield  # Make this a generator
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Handle selection and emit ProjectSelected message."""
@@ -62,9 +57,9 @@ class ProjectList(ListView):
         self.projects = projects
         self.clear()
         if not projects:
-            self.append(ListItem(Label("No projects found"), id="empty-state"))
+            self.append(ListItem(Label("No projects found")))
         else:
             for project in projects:
-                item = ProjectListItem(project, id=f"project-{_sanitize_id(project)}")
+                item = ProjectListItem(project)
                 item.compose_add_child(Label(project))
                 self.append(item)
