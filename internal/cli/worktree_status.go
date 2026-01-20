@@ -71,13 +71,23 @@ func runWorktreeStatus(cmd *cobra.Command, args []string) error {
 			Base:   e.Base,
 		}
 
-		// Use cached data if available and not refreshing
-		if cached, ok := healthMap[e.Folder]; ok && statusCached {
+		// Use cached data if available and not forcing refresh
+		if cached, ok := healthMap[e.Folder]; ok && !statusRefresh {
 			s.Dirty = cached.Dirty
 			s.Unpushed = cached.Unpushed
 			s.PRState = cached.PRState
 			s.LastCheck = cached.LastCheck
-		} else {
+			statuses = append(statuses, s)
+			continue
+		}
+
+		// Skip live queries if --cached flag is set
+		if statusCached {
+			statuses = append(statuses, s)
+			continue
+		}
+
+		{
 			// Fetch fresh data
 			folderPath := filepath.Join(WorkspaceDir(), e.Folder)
 			repo := git.NewRepo(folderPath)
