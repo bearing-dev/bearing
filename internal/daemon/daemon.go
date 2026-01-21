@@ -21,6 +21,9 @@ type Config struct {
 	Interval     time.Duration
 }
 
+// lastPlanSync tracks the last time plan sync ran
+var lastPlanSync time.Time
+
 // Daemon manages the health monitoring background process
 type Daemon struct {
 	config Config
@@ -144,11 +147,13 @@ func (d *Daemon) run() error {
 
 	// Initial check
 	d.runHealthCheck()
+	d.runPlanSync()
 
 	for {
 		select {
 		case <-ticker.C:
 			d.runHealthCheck()
+			d.runPlanSync()
 		case sig := <-sigChan:
 			fmt.Printf("Received signal %v, stopping...\n", sig)
 			os.Remove(d.PIDFile())
@@ -193,6 +198,35 @@ func (d *Daemon) runHealthCheck() {
 
 	if err := store.WriteHealth(health); err != nil {
 		fmt.Printf("Error writing health.jsonl: %v\n", err)
+	}
+}
+
+func (d *Daemon) runPlanSync() {
+	cfg, err := LoadConfig(d.config.BearingDir)
+	if err != nil {
+		fmt.Printf("Error loading config for plan sync: %v\n", err)
+		return
+	}
+
+	if !cfg.PlanSync.Enabled {
+		return
+	}
+
+	// Check if enough time has passed since last sync
+	intervalMinutes := cfg.PlanSync.IntervalMinutes
+	if intervalMinutes <= 0 {
+		intervalMinutes = 5
+	}
+	if time.Since(lastPlanSync) < time.Duration(intervalMinutes)*time.Minute {
+		return
+	}
+
+	result := d.SyncPlans()
+	lastPlanSync = time.Now()
+
+	if result.Created > 0 || result.Updated > 0 || result.Errors > 0 {
+		fmt.Printf("Plan sync: %d created, %d updated, %d skipped, %d errors (%d API calls)\n",
+			result.Created, result.Updated, result.Skipped, result.Errors, result.APICalls)
 	}
 }
 
