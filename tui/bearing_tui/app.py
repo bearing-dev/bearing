@@ -174,7 +174,7 @@ class BearingApp(App):
             if hasattr(item, "project") and item.project == project:
                 project_list.index = i
                 self._current_project = project
-                self._update_worktrees(project)
+                self._update_worktree_table(project)
                 break
 
     def on_mount(self) -> None:
