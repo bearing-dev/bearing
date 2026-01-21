@@ -321,11 +321,13 @@ class BearingApp(App):
             counts[entry.repo] = counts.get(entry.repo, 0) + 1
 
         project_list = self.query_one(ProjectList)
-        project_list.set_projects(projects, counts)
+        # Pass preserve_selection to maintain highlight during refresh
+        project_list.set_projects(projects, counts, preserve_selection=saved_project if saved_project in projects else None)
 
-        # Restore selection if project still exists
+        # Restore worktree data if project still exists
         if saved_project and saved_project in projects:
-            self._select_project(saved_project)
+            self._current_project = saved_project
+            self._update_worktree_table(saved_project)
             # Restore worktree cursor position
             if saved_cursor is not None and worktree_table.row_count > saved_cursor:
                 worktree_table.cursor_coordinate = (saved_cursor, 0)

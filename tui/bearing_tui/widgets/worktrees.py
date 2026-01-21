@@ -40,8 +40,9 @@ class WorktreeTable(DataTable):
         self.cursor_type = "row"
 
     def _setup_columns(self) -> None:
-        """Add table columns."""
-        self.add_columns("Branch", "Plan", "Issue", "Dirty", "Unpushed", "PR", "Base")
+        """Add table columns - ordered by actionability."""
+        # PR first (most actionable), then context (branch/plan/issue), then status
+        self.add_columns("PR", "Branch", "Plan", "Issue", "Dirty", "Base")
 
     def on_mount(self) -> None:
         """Set up table when mounted."""
@@ -57,18 +58,18 @@ class WorktreeTable(DataTable):
         self.clear()
 
         if not worktrees:
-            self.add_row("No worktrees", "", "", "", "", "", "", key="empty")
+            self.add_row("-", "No worktrees", "-", "-", "", "", key="empty")
             return
 
         for wt in worktrees:
             health = health_map.get(wt.folder)
+            pr = health.pr_state if health and health.pr_state else "-"
             plan = wt.plan or "-"
             issue = f"#{wt.issue}" if wt.issue else "-"
             dirty = "\u25cf" if health and health.dirty else ""
-            unpushed = str(health.unpushed) if health and health.unpushed else "-"
-            pr = health.pr_state if health and health.pr_state else "-"
             base = "\u2605" if wt.base else ""
-            self.add_row(wt.branch, plan, issue, dirty, unpushed, pr, base, key=wt.folder)
+            # Order: PR, Branch, Plan, Issue, Dirty, Base
+            self.add_row(pr, wt.branch, plan, issue, dirty, base, key=wt.folder)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection and emit WorktreeSelected message."""
@@ -78,4 +79,4 @@ class WorktreeTable(DataTable):
     def clear_worktrees(self) -> None:
         """Clear the table and show empty state."""
         self.clear()
-        self.add_row("Select a project", "", "", "", "", "", "", key="empty")
+        self.add_row("-", "Select a project", "-", "-", "", "", key="empty")
