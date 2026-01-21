@@ -65,7 +65,7 @@ func runPlanPush(cmd *cobra.Command, args []string) error {
 	// Trim leading/trailing whitespace from body
 	body = strings.TrimSpace(body)
 
-	repoPath := filepath.Join(WorkspaceDir(), fm.Repo)
+	repoPath := GetRepoPath(fm.Repo)
 
 	if fm.Issue == "" {
 		// Create new issue

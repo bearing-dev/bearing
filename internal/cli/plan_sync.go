@@ -89,7 +89,7 @@ func runPlanSync(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		repoPath := filepath.Join(WorkspaceDir(), fm.Repo)
+		repoPath := GetRepoPath(fm.Repo)
 		body = strings.TrimSpace(body)
 
 		if fm.Issue == "" {
@@ -144,7 +144,7 @@ func pushPlanToIssue(planFile string, fm *planFrontmatter) error {
 	body = strings.TrimSpace(body)
 
 	// Push to GitHub using gh issue edit
-	repoPath := filepath.Join(WorkspaceDir(), fm.Repo)
+	repoPath := GetRepoPath(fm.Repo)
 	ghCmd := exec.Command("gh", "issue", "edit", fm.Issue, "--body", body)
 	ghCmd.Dir = repoPath
 	var stderr bytes.Buffer
