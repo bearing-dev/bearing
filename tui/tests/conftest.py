@@ -9,6 +9,7 @@ from tests.mock_data import (
     create_overflow_workspace,
     create_long_names_workspace,
     create_single_workspace,
+    create_prs_workspace,
 )
 
 
@@ -48,6 +49,14 @@ def long_names_workspace():
 def single_workspace():
     """Create a workspace with a single project and worktree."""
     path = create_single_workspace()
+    yield path
+    shutil.rmtree(path, ignore_errors=True)
+
+
+@pytest.fixture
+def prs_workspace():
+    """Create a workspace with PR data for testing."""
+    path = create_prs_workspace()
     yield path
     shutil.rmtree(path, ignore_errors=True)
 
