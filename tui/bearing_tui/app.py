@@ -1,7 +1,9 @@
 """Bearing TUI application."""
+import json
 import os
 import subprocess
 import webbrowser
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -131,15 +133,65 @@ class BearingApp(App):
             id="footer-bar"
         )
 
+    @property
+    def _session_file(self) -> Path:
+        """Path to session state file."""
+        bearing_dir = Path.home() / ".bearing"
+        bearing_dir.mkdir(exist_ok=True)
+        return bearing_dir / "tui-session.json"
+
+    def _save_session(self) -> None:
+        """Save current selection to session file."""
+        try:
+            session = {
+                "selected_project": self._current_project,
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._session_file.write_text(json.dumps(session, indent=2))
+        except Exception:
+            pass  # Don't fail on session save errors
+
+    def _restore_session(self) -> None:
+        """Restore selection from session file if recent."""
+        try:
+            if not self._session_file.exists():
+                return
+            session = json.loads(self._session_file.read_text())
+            timestamp = datetime.fromisoformat(session.get("timestamp", ""))
+            # Only restore if < 24 hours old
+            if datetime.now() - timestamp > timedelta(hours=24):
+                return
+            project = session.get("selected_project")
+            if project:
+                self._select_project(project)
+        except Exception:
+            pass  # Don't fail on session restore errors
+
+    def _select_project(self, project: str) -> None:
+        """Select a project by name."""
+        project_list = self.query_one("#project-list", ProjectList)
+        for i, item in enumerate(project_list.children):
+            if hasattr(item, "project") and item.project == project:
+                project_list.index = i
+                self._current_project = project
+                self._update_worktrees(project)
+                break
+
     def on_mount(self) -> None:
         """Load data when app mounts."""
         self.action_refresh()
+        self._restore_session()
         # Focus the project list initially
         self.query_one("#project-list", ProjectList).focus()
 
     def action_show_help(self) -> None:
         """Show the help modal."""
         self.push_screen(HelpScreen())
+
+    def action_quit(self) -> None:
+        """Save session and quit."""
+        self._save_session()
+        self.exit()
 
     def action_refresh(self) -> None:
         """Refresh data from files."""
