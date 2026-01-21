@@ -21,6 +21,8 @@ from bearing_tui.widgets import (
     DetailsPanel,
     LocalEntry,
     WorkflowEntry,
+    PlansList,
+    load_plans,
 )
 
 
@@ -54,12 +56,60 @@ class HelpScreen(ModalScreen):
                 "  [yellow]R[/]      Force refresh (daemon)\n"
                 "  [yellow]d[/]      Daemon health check\n"
                 "  [yellow]o[/]      Open PR in browser\n"
+                "  [yellow]p[/]      View plans\n"
                 "  [yellow]?[/]      Show this help\n"
                 "  [yellow]q[/]      Quit\n",
                 id="help-content",
             ),
             id="help-modal",
         )
+
+
+class PlansScreen(ModalScreen):
+    """Modal screen showing plans list."""
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("q", "dismiss", "Close"),
+        Binding("p", "dismiss", "Close"),
+        Binding("j", "cursor_down", "Down", show=False),
+        Binding("k", "cursor_up", "Up", show=False),
+        Binding("o", "open_issue", "Open Issue", show=False),
+    ]
+
+    def __init__(self, workspace: Path) -> None:
+        super().__init__()
+        self.workspace = workspace
+
+    def compose(self) -> ComposeResult:
+        yield Container(
+            Static("[b cyan]Plans[/] [dim](press o to open issue, Esc to close)[/]", id="plans-header"),
+            PlansList(id="plans-list"),
+            id="plans-modal",
+        )
+
+    def on_mount(self) -> None:
+        plans = load_plans(self.workspace)
+        plans_list = self.query_one("#plans-list", PlansList)
+        plans_list.set_plans(plans)
+        plans_list.focus()
+
+    def action_cursor_down(self) -> None:
+        self.query_one(PlansList).action_cursor_down()
+
+    def action_cursor_up(self) -> None:
+        self.query_one(PlansList).action_cursor_up()
+
+    def action_open_issue(self) -> None:
+        """Open the selected plan's issue in browser."""
+        plans_list = self.query_one(PlansList)
+        if plans_list.index is not None and plans_list.index < len(plans_list._plans):
+            plan = plans_list._plans[plans_list.index]
+            if plan.issue:
+                # Get repo from the plan's project name
+                url = f"https://github.com/joshribakoff/{plan.project}/issues/{plan.issue}"
+                webbrowser.open(url)
+                self.app.notify(f"Opened issue #{plan.issue}", timeout=2)
 
 
 class BearingApp(App):
@@ -78,6 +128,7 @@ class BearingApp(App):
         Binding("R", "force_refresh", "Force Refresh", show=False),
         Binding("d", "daemon", "Daemon"),
         Binding("o", "open_pr", "Open PR", show=False),
+        Binding("p", "show_plans", "Plans"),
         # Panel navigation by number (0-indexed)
         Binding("0", "focus_panel_0", "Projects", show=False),
         Binding("1", "focus_panel_1", "Worktrees", show=False),
@@ -128,6 +179,7 @@ class BearingApp(App):
             "[yellow]c[/]leanup  "
             "[yellow]r[/]efresh  "
             "[yellow]o[/]pen PR  "
+            "[yellow]p[/]lans  "
             "[yellow]?[/] help  "
             "[yellow]q[/]uit",
             id="footer-bar"
@@ -192,6 +244,10 @@ class BearingApp(App):
         """Save session and quit."""
         self._save_session()
         self.exit()
+
+    def action_show_plans(self) -> None:
+        """Show the plans modal."""
+        self.push_screen(PlansScreen(self.workspace))
 
     def action_refresh(self) -> None:
         """Refresh data from files."""
