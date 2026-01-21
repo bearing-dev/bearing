@@ -193,10 +193,25 @@ class BearingApp(App):
         return bearing_dir / "tui-session.json"
 
     def _save_session(self) -> None:
-        """Save current selection to session file."""
+        """Save full UI state to session file."""
         try:
+            # Get focused panel
+            focused = self.focused
+            focused_panel = focused.id if focused and focused.id in self._panel_order else None
+
+            # Get worktree table cursor position
+            worktree_table = self.query_one(WorktreeTable)
+            worktree_cursor = worktree_table.cursor_row if worktree_table.row_count > 0 else None
+
+            # Get project list index
+            project_list = self.query_one(ProjectList)
+            project_index = project_list.index
+
             session = {
                 "selected_project": self._current_project,
+                "project_index": project_index,
+                "worktree_cursor": worktree_cursor,
+                "focused_panel": focused_panel,
                 "timestamp": datetime.now().isoformat(),
             }
             self._session_file.write_text(json.dumps(session, indent=2))
@@ -204,7 +219,7 @@ class BearingApp(App):
             pass  # Don't fail on session save errors
 
     def _restore_session(self) -> None:
-        """Restore selection from session file if recent."""
+        """Restore full UI state from session file if recent."""
         try:
             if not self._session_file.exists():
                 return
@@ -213,11 +228,42 @@ class BearingApp(App):
             # Only restore if < 24 hours old
             if datetime.now() - timestamp > timedelta(hours=24):
                 return
+
+            # Restore project selection
             project = session.get("selected_project")
             if project:
                 self._select_project(project)
+
+            # Restore worktree cursor
+            worktree_cursor = session.get("worktree_cursor")
+            if worktree_cursor is not None:
+                worktree_table = self.query_one(WorktreeTable)
+                if worktree_table.row_count > worktree_cursor:
+                    worktree_table.cursor_coordinate = (worktree_cursor, 0)
+                    # Trigger details update for selected worktree
+                    self._update_details_for_cursor(worktree_cursor)
+
+            # Restore focused panel
+            focused_panel = session.get("focused_panel")
+            if focused_panel:
+                try:
+                    self.query_one(f"#{focused_panel}").focus()
+                except Exception:
+                    pass
         except Exception:
             pass  # Don't fail on session restore errors
+
+    def _update_details_for_cursor(self, cursor_row: int) -> None:
+        """Update details panel for worktree at cursor position."""
+        from textual.coordinate import Coordinate
+        worktree_table = self.query_one(WorktreeTable)
+        try:
+            cell_key = worktree_table.coordinate_to_cell_key(Coordinate(cursor_row, 0))
+            folder = str(cell_key.row_key.value)
+            if folder and folder != "empty":
+                self._update_details(folder)
+        except Exception:
+            pass
 
     def _select_project(self, project: str) -> None:
         """Select a project by name."""
