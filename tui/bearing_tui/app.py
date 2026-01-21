@@ -23,6 +23,8 @@ from bearing_tui.widgets import (
     WorkflowEntry,
     PlansList,
     load_plans,
+    PRsTable,
+    PRDisplayEntry,
 )
 
 
@@ -54,7 +56,7 @@ class HelpScreen(ModalScreen):
                 "  [yellow]n[/]      New worktree\n"
                 "  [yellow]c[/]      Cleanup worktree\n"
                 "  [yellow]r[/]      Refresh data\n"
-                "  [yellow]R[/]      Force refresh (daemon)\n"
+                "  [yellow]R[/]      View GitHub PRs\n"
                 "  [yellow]d[/]      Daemon health check\n"
                 "  [yellow]o[/]      Open PR in browser\n"
                 "  [yellow]p[/]      View plans\n"
@@ -114,6 +116,72 @@ class PlansScreen(ModalScreen):
                 self.app.notify(f"Opened issue #{plan.issue}", timeout=2)
 
 
+class PRsScreen(ModalScreen):
+    """Modal screen showing GitHub PRs."""
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("q", "app.quit", "Quit"),
+        Binding("ctrl+c", "app.quit", "Quit", show=False),
+        Binding("R", "dismiss", "Close"),
+        Binding("j", "cursor_down", "Down", show=False),
+        Binding("k", "cursor_up", "Up", show=False),
+        Binding("o", "open_pr", "Open PR", show=False),
+        Binding("enter", "open_pr", "Open PR", show=False),
+    ]
+
+    def __init__(self, workspace: Path, state) -> None:
+        super().__init__()
+        self.workspace = workspace
+        self.state = state
+
+    def compose(self) -> ComposeResult:
+        yield Container(
+            Static("[b cyan]GitHub PRs[/] [dim](press o to open, Esc to close)[/]", id="prs-header"),
+            PRsTable(id="prs-table"),
+            id="prs-modal",
+        )
+
+    def on_mount(self) -> None:
+        prs = self._load_prs()
+        prs_table = self.query_one("#prs-table", PRsTable)
+        prs_table.set_prs(prs)
+        prs_table.focus()
+
+    def _load_prs(self) -> list[PRDisplayEntry]:
+        """Load PRs with linked worktree info."""
+        prs = self.state.get_all_prs()
+        result = []
+        for pr in prs:
+            # Check if there's a worktree for this branch
+            wt = self.state.get_worktree_for_branch(pr.repo, pr.branch)
+            result.append(PRDisplayEntry(
+                repo=pr.repo,
+                number=pr.number,
+                title=pr.title,
+                state="DRAFT" if pr.draft else pr.state,
+                branch=pr.branch,
+                checks=pr.checks,
+                worktree=wt.folder if wt else None,
+            ))
+        return result
+
+    def action_cursor_down(self) -> None:
+        self.query_one(PRsTable).action_cursor_down()
+
+    def action_cursor_up(self) -> None:
+        self.query_one(PRsTable).action_cursor_up()
+
+    def action_open_pr(self) -> None:
+        """Open the selected PR in browser."""
+        prs_table = self.query_one(PRsTable)
+        pr = prs_table.get_selected_pr()
+        if pr:
+            url = f"https://github.com/joshribakoff/{pr.repo}/pull/{pr.number}"
+            webbrowser.open(url)
+            self.app.notify(f"Opened PR #{pr.number}", timeout=2)
+
+
 class BearingApp(App):
     """Bearing worktree management TUI."""
 
@@ -127,7 +195,7 @@ class BearingApp(App):
         Binding("n", "new_worktree", "New"),
         Binding("c", "cleanup", "Cleanup"),
         Binding("r", "refresh", "Refresh"),
-        Binding("R", "force_refresh", "Force Refresh", show=False),
+        Binding("R", "show_prs", "PRs"),
         Binding("d", "daemon", "Daemon"),
         Binding("o", "open_pr", "Open PR", show=False),
         Binding("p", "show_plans", "Plans"),
@@ -180,7 +248,7 @@ class BearingApp(App):
             "[yellow]n[/]ew  "
             "[yellow]c[/]leanup  "
             "[yellow]r[/]efresh  "
-            "[yellow]o[/]pen PR  "
+            "[yellow]R[/] PRs  "
             "[yellow]p[/]lans  "
             "[yellow]?[/] help  "
             "[yellow]q[/]uit",
@@ -316,6 +384,10 @@ class BearingApp(App):
     def action_show_plans(self) -> None:
         """Show the plans modal."""
         self.push_screen(PlansScreen(self.workspace))
+
+    def action_show_prs(self) -> None:
+        """Show the PRs modal."""
+        self.push_screen(PRsScreen(self.workspace, self.state))
 
     def action_refresh(self) -> None:
         """Refresh data from files."""
@@ -674,6 +746,23 @@ def _create_mock_workspace():
     ]
     with open(tmpdir / "health.jsonl", "w") as f:
         for entry in health_data:
+            f.write(json.dumps(entry) + "\n")
+
+    # Mock prs.jsonl - GitHub PRs across all repos
+    prs_data = [
+        {"repo": "acme-web", "number": 142, "title": "Add OAuth2 authentication flow", "state": "OPEN", "branch": "feature-auth", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T18:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 138, "title": "Fix checkout cart calculation bug", "state": "MERGED", "branch": "fix-checkout", "baseBranch": "main", "author": "bob", "updated": "2026-01-19T12:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 145, "title": "Implement lazy loading for product images", "state": "OPEN", "branch": "perf-images", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T20:00:00Z", "checks": "PENDING", "draft": False},
+        {"repo": "acme-web", "number": 130, "title": "New design system v2", "state": "OPEN", "branch": "redesign-v2", "baseBranch": "main", "author": "carol", "updated": "2026-01-18T10:00:00Z", "checks": "FAILURE", "draft": True},
+        {"repo": "acme-web", "number": 140, "title": "Add dark mode theme support", "state": "OPEN", "branch": "dark-mode", "baseBranch": "main", "author": "bob", "updated": "2026-01-17T14:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 143, "title": "Internationalization support", "state": "OPEN", "branch": "i18n", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T08:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-api", "number": 89, "title": "Add GraphQL API layer", "state": "OPEN", "branch": "graphql", "baseBranch": "main", "author": "dave", "updated": "2026-01-19T16:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-api", "number": 85, "title": "Implement rate limiting middleware", "state": "MERGED", "branch": "rate-limit", "baseBranch": "main", "author": "eve", "updated": "2026-01-18T09:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-mobile", "number": 67, "title": "Push notification integration", "state": "OPEN", "branch": "push-notif", "baseBranch": "main", "author": "frank", "updated": "2026-01-19T11:00:00Z", "checks": "PENDING", "draft": True},
+        {"repo": "infra", "number": 34, "title": "Kubernetes cluster upgrade to 1.29", "state": "OPEN", "branch": "k8s-upgrade", "baseBranch": "main", "author": "grace", "updated": "2026-01-19T15:00:00Z", "checks": "SUCCESS", "draft": False},
+    ]
+    with open(tmpdir / "prs.jsonl", "w") as f:
+        for entry in prs_data:
             f.write(json.dumps(entry) + "\n")
 
     return tmpdir

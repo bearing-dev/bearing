@@ -286,3 +286,54 @@ PlansList:focus PlanListItem.-highlight {
     color: $text-bright;
     text-style: bold;
 }
+
+/* PRs modal styling */
+PRsScreen {
+    align: center middle;
+}
+
+#prs-modal {
+    width: 90;
+    height: auto;
+    max-height: 80%;
+    background: $bg-panel;
+    border: round $accent-green;
+    padding: 1 2;
+}
+
+#prs-header {
+    height: 1;
+    margin-bottom: 1;
+}
+
+PRsTable {
+    background: $bg-panel;
+    height: auto;
+    max-height: 20;
+    border: none;
+}
+
+PRsTable > .datatable--header {
+    background: $bg-surface;
+    color: $accent-green;
+    text-style: bold;
+}
+
+PRsTable:focus > .datatable--cursor {
+    background: #2d5a8a;
+    color: $text-bright;
+    text-style: bold;
+}
+
+PRsTable > .datatable--cursor {
+    background: $bg-selection;
+    color: $text;
+}
+
+PRsTable > .datatable--even-row {
+    background: $bg-panel;
+}
+
+PRsTable > .datatable--odd-row {
+    background: $bg-surface;
+}
