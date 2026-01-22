@@ -2,6 +2,9 @@ package daemon
 
 import (
 	"fmt"
+	"io/fs"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,17 +17,22 @@ import (
 	"github.com/joshribakoff/bearing/internal/jsonl"
 )
 
+// DefaultHTTPPort is the preferred port for the HTTP server
+const DefaultHTTPPort = 8374
+
 // Config holds daemon configuration
 type Config struct {
 	WorkspaceDir string
 	BearingDir   string
 	Interval     time.Duration
+	StaticFS     fs.FS // Optional: embedded static files for web dashboard
 }
 
 // Daemon manages the health monitoring background process
 type Daemon struct {
-	config Config
-	stop   chan struct{}
+	config     Config
+	stop       chan struct{}
+	httpServer *HTTPServer
 }
 
 // New creates a new daemon instance
@@ -133,6 +141,31 @@ func (d *Daemon) run() error {
 		return err
 	}
 
+	// Start HTTP server for web dashboard
+	store := jsonl.NewStore(d.config.WorkspaceDir)
+	d.httpServer = NewHTTPServer(store, d.config.WorkspaceDir, d.config.StaticFS)
+
+	go func() {
+		// Try preferred port first, fall back to any available port
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", DefaultHTTPPort))
+		if err != nil {
+			listener, err = net.Listen("tcp", ":0")
+			if err != nil {
+				fmt.Printf("HTTP server error: %v\n", err)
+				return
+			}
+		}
+
+		port := listener.Addr().(*net.TCPAddr).Port
+		portFile := filepath.Join(d.config.BearingDir, "http.port")
+		os.WriteFile(portFile, []byte(fmt.Sprintf("%d", port)), 0644)
+
+		fmt.Printf("HTTP server listening on http://localhost:%d\n", port)
+		if err := http.Serve(listener, d.httpServer.Handler()); err != nil {
+			fmt.Printf("HTTP server error: %v\n", err)
+		}
+	}()
+
 	// Handle signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -194,6 +227,14 @@ func (d *Daemon) runHealthCheck() {
 
 	if err := store.WriteHealth(health); err != nil {
 		fmt.Printf("Error writing health.jsonl: %v\n", err)
+	}
+
+	// Broadcast update to connected web clients
+	if d.httpServer != nil {
+		d.httpServer.Broadcast("health", map[string]interface{}{
+			"timestamp":     time.Now(),
+			"worktreeCount": len(health),
+		})
 	}
 }
 

@@ -20,6 +20,11 @@ class ProjectListItem(ListItem):
             text.append(f" ({self.count})", style="dim cyan")
         yield Static(text, markup=False)
 
+    def on_click(self, event) -> None:
+        """Focus parent list when item is clicked."""
+        if self.parent:
+            self.parent.focus()
+
 
 class ProjectList(ListView):
     """Left panel showing list of repos/projects."""
@@ -43,6 +48,10 @@ class ProjectList(ListView):
         """Handle selection and emit ProjectSelected message."""
         if isinstance(event.item, ProjectListItem):
             self.post_message(self.ProjectSelected(event.item.project))
+
+    def on_click(self, event) -> None:
+        """Focus the list when clicked."""
+        self.focus()
 
     def set_projects(self, projects: list[str], counts: dict[str, int] | None = None, preserve_selection: str | None = None) -> None:
         """Update the project list with optional worktree counts.
