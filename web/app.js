@@ -4,6 +4,7 @@ const API_BASE = '';
 
 // State
 const state = {
+  currentView: 'worktrees',
   projects: [],
   worktrees: [],
   plans: [],
@@ -19,6 +20,7 @@ const state = {
 
 // DOM elements
 const els = {
+  tabBar: null,
   projectList: null,
   worktreeRows: null,
   detailsContent: null,
@@ -33,6 +35,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 function init() {
   // Cache DOM elements
+  els.tabBar = document.querySelector('.tab-bar');
   els.projectList = document.getElementById('project-list');
   els.worktreeRows = document.getElementById('worktree-rows');
   els.detailsContent = document.getElementById('details-content');
@@ -44,6 +47,7 @@ function init() {
   // Setup event listeners
   setupKeyboardNavigation();
   setupClickHandlers();
+  setupTabHandlers();
   connectSSE();
 
   // Initial data load
@@ -262,16 +266,16 @@ function setupKeyboardNavigation() {
         openPR();
         e.preventDefault();
         break;
-      case '0':
-        focusPanel('project-list');
-        e.preventDefault();
-        break;
       case '1':
-        focusPanel('worktree-table');
+        switchView('worktrees');
         e.preventDefault();
         break;
       case '2':
-        focusPanel('details-panel');
+        switchView('issues');
+        e.preventDefault();
+        break;
+      case '3':
+        switchView('prs');
         e.preventDefault();
         break;
       case 'h':
@@ -301,11 +305,7 @@ function setupKeyboardNavigation() {
         e.preventDefault();
         break;
       case 'Tab':
-        if (e.shiftKey) {
-          focusPrevPanel();
-        } else {
-          focusNextPanel();
-        }
+        cycleViews();
         e.preventDefault();
         break;
     }
@@ -536,3 +536,67 @@ function showError(msg) {
   console.error('Error:', msg);
   setStatus('error');
 }
+
+// Tab navigation
+function setupTabHandlers() {
+  els.tabBar.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (tab) {
+      switchView(tab.dataset.view);
+    }
+  });
+}
+
+function switchView(view) {
+  state.currentView = view;
+
+  // Update tab buttons
+  els.tabBar.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.view === view);
+  });
+
+  // Show/hide view content
+  const mainContainer = document.getElementById('main-container');
+  const detailsSection = document.getElementById('details-section');
+
+  if (view === 'worktrees') {
+    mainContainer.style.display = 'flex';
+    detailsSection.style.display = 'block';
+  } else {
+    mainContainer.style.display = 'none';
+    detailsSection.style.display = 'none';
+    showPlaceholder(view);
+  }
+}
+
+function cycleViews() {
+  const views = ['worktrees', 'issues', 'prs'];
+  const idx = views.indexOf(state.currentView);
+  const next = views[(idx + 1) % views.length];
+  switchView(next);
+}
+
+function showPlaceholder(view) {
+  const titles = { issues: 'Issues', prs: 'Pull Requests' };
+  let placeholder = document.getElementById('placeholder-view');
+
+  if (!placeholder) {
+    placeholder = document.createElement('div');
+    placeholder.id = 'placeholder-view';
+    placeholder.className = 'placeholder-view';
+    document.body.insertBefore(placeholder, document.getElementById('footer-bar'));
+  }
+
+  placeholder.textContent = `${titles[view]} - Coming soon`;
+  placeholder.style.display = 'flex';
+}
+
+// Hide placeholder when switching back to worktrees
+const originalSwitchView = switchView;
+switchView = function(view) {
+  const placeholder = document.getElementById('placeholder-view');
+  if (placeholder) {
+    placeholder.style.display = 'none';
+  }
+  originalSwitchView(view);
+};

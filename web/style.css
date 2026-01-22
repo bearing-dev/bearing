@@ -61,6 +61,60 @@ body {
   font-size: 16px;
 }
 
+/* Tab Bar */
+.tab-bar {
+  background: #3c3f41;
+  display: flex;
+  gap: 0;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab.active {
+  color: var(--text-bright);
+  background: #4e5254;
+  border-bottom-color: var(--accent-cyan);
+}
+
+/* View containers */
+.view-container {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.view-container.active {
+  display: flex;
+}
+
+#placeholder-view {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-dim);
+  font-size: 16px;
+  padding: 8px;
+}
+
 #status-indicator {
   width: 8px;
   height: 8px;

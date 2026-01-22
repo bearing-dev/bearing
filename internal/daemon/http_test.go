@@ -287,6 +287,82 @@ This is a test plan.
 	}
 }
 
+func TestHandleIssues(t *testing.T) {
+	store, dir := setupTestStore(t)
+
+	// Create plans directory with test plans
+	plansDir := filepath.Join(dir, "plans", "myrepo")
+	if err := os.MkdirAll(plansDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Plan with issue number
+	planWithIssue := `---
+title: Feature Plan
+status: active
+issue: "#42"
+priority: 1
+---
+
+# Feature Plan
+`
+	if err := os.WriteFile(filepath.Join(plansDir, "abc12-feature.md"), []byte(planWithIssue), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Plan without issue number (should be excluded)
+	planNoIssue := `---
+title: Draft Plan
+status: draft
+---
+
+# Draft Plan
+`
+	if err := os.WriteFile(filepath.Join(plansDir, "xyz99-draft.md"), []byte(planNoIssue), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	server := NewHTTPServer(store, dir, nil)
+	handler := server.Handler()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/issues", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", rec.Code)
+	}
+
+	var resp []IssueResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// Only plan with issue should be included
+	if len(resp) != 1 {
+		t.Fatalf("expected 1 issue, got %d", len(resp))
+	}
+
+	if resp[0].Number != 42 {
+		t.Errorf("expected issue number 42, got %d", resp[0].Number)
+	}
+	if resp[0].Title != "Feature Plan" {
+		t.Errorf("expected title 'Feature Plan', got %s", resp[0].Title)
+	}
+	if resp[0].Status != "active" {
+		t.Errorf("expected status 'active', got %s", resp[0].Status)
+	}
+	if resp[0].Priority != 1 {
+		t.Errorf("expected priority 1, got %d", resp[0].Priority)
+	}
+	if resp[0].Repo != "myrepo" {
+		t.Errorf("expected repo 'myrepo', got %s", resp[0].Repo)
+	}
+	if resp[0].PlanID != "abc12-feature" {
+		t.Errorf("expected plan_id 'abc12-feature', got %s", resp[0].PlanID)
+	}
+}
+
 func TestHandleStatus(t *testing.T) {
 	store, dir := setupTestStore(t)
 	server := NewHTTPServer(store, dir, nil)

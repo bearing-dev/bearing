@@ -12,6 +12,12 @@
     <span id="status-indicator" class="status-ok" title="Connected"></span>
   </header>
 
+  <nav class="tab-bar">
+    <button class="tab active" data-view="worktrees">Worktrees</button>
+    <button class="tab" data-view="issues">Issues</button>
+    <button class="tab" data-view="prs">PRs</button>
+  </nav>
+
   <main id="main-container">
     <aside id="projects-panel" class="panel">
       <div class="panel-header">[0] Projects</div>
@@ -40,9 +46,9 @@
   </section>
 
   <footer id="footer-bar">
-    <span><kbd>0</kbd>-<kbd>2</kbd> panels</span>
+    <span><kbd>1</kbd>-<kbd>3</kbd> views</span>
+    <span><kbd>Tab</kbd> cycle</span>
     <span><kbd>j/k</kbd> nav</span>
-    <span><kbd>n</kbd>ew</span>
     <span><kbd>r</kbd>efresh</span>
     <span><kbd>o</kbd>pen PR</span>
     <span><kbd>p</kbd>lans</span>
@@ -55,14 +61,14 @@
       <h2>Bearing Dashboard - Keybindings</h2>
       <div class="keybindings">
         <h3>Navigation</h3>
-        <div class="binding"><kbd>0</kbd> Focus projects panel</div>
-        <div class="binding"><kbd>1</kbd> Focus worktrees panel</div>
-        <div class="binding"><kbd>2</kbd> Focus details panel</div>
+        <div class="binding"><kbd>1</kbd> Worktrees view</div>
+        <div class="binding"><kbd>2</kbd> Issues view</div>
+        <div class="binding"><kbd>3</kbd> PRs view</div>
         <div class="binding"><kbd>h</kbd> / <kbd>←</kbd> Focus left panel</div>
         <div class="binding"><kbd>l</kbd> / <kbd>→</kbd> Focus right panel</div>
         <div class="binding"><kbd>j</kbd> / <kbd>↓</kbd> Move down</div>
         <div class="binding"><kbd>k</kbd> / <kbd>↑</kbd> Move up</div>
-        <div class="binding"><kbd>Tab</kbd> Next panel</div>
+        <div class="binding"><kbd>Tab</kbd> Cycle views</div>
         <div class="binding"><kbd>Enter</kbd> Select item</div>
 
         <h3>Actions</h3>

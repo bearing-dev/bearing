@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +45,7 @@ func (s *HTTPServer) Handler() http.Handler {
 	mux.HandleFunc("/api/projects", s.handleProjects)
 	mux.HandleFunc("/api/worktrees", s.handleWorktrees)
 	mux.HandleFunc("/api/plans", s.handlePlans)
+	mux.HandleFunc("/api/issues", s.handleIssues)
 	mux.HandleFunc("/api/prs", s.handlePRs)
 	mux.HandleFunc("/api/health", s.handleHealth)
 	mux.HandleFunc("/api/status", s.handleStatus)
@@ -188,6 +190,16 @@ type PlanResponse struct {
 	Path    string `json:"path"`
 }
 
+// IssueResponse for API - plans with issue numbers
+type IssueResponse struct {
+	Number   int    `json:"number"`
+	Title    string `json:"title"`
+	Status   string `json:"status"`
+	Priority int    `json:"priority"`
+	Repo     string `json:"repo"`
+	PlanID   string `json:"plan_id"`
+}
+
 func (s *HTTPServer) handlePlans(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -224,6 +236,73 @@ func (s *HTTPServer) handlePlans(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(plans)
+}
+
+func (s *HTTPServer) handleIssues(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	plansDir := filepath.Join(s.workspace, "plans")
+	issues := make([]IssueResponse, 0)
+	issueRe := regexp.MustCompile(`#?(\d+)`)
+
+	filepath.WalkDir(plansDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
+			return nil
+		}
+
+		rel, _ := filepath.Rel(plansDir, path)
+		parts := strings.Split(rel, string(os.PathSeparator))
+		if len(parts) < 2 {
+			return nil
+		}
+
+		project := parts[0]
+		fm := parsePlanFrontmatter(path)
+
+		// Only include plans with issue numbers
+		if fm["issue"] == "" {
+			return nil
+		}
+
+		// Parse issue number from formats like "#123" or "123"
+		matches := issueRe.FindStringSubmatch(fm["issue"])
+		if len(matches) < 2 {
+			return nil
+		}
+		num, err := strconv.Atoi(matches[1])
+		if err != nil {
+			return nil
+		}
+
+		// Parse priority (default to 0)
+		priority := 0
+		if fm["priority"] != "" {
+			if p, err := strconv.Atoi(fm["priority"]); err == nil {
+				priority = p
+			}
+		}
+
+		// Extract plan ID from filename (e.g., "abc12-feature.md" -> "abc12")
+		filename := filepath.Base(path)
+		planID := strings.TrimSuffix(filename, ".md")
+
+		issues = append(issues, IssueResponse{
+			Number:   num,
+			Title:    fm["title"],
+			Status:   fm["status"],
+			Priority: priority,
+			Repo:     project,
+			PlanID:   planID,
+		})
+
+		return nil
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(issues)
 }
 
 // PRResponse for API
