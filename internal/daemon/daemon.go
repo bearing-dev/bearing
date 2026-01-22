@@ -3,6 +3,7 @@ package daemon
 import (
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,8 +17,8 @@ import (
 	"github.com/joshribakoff/bearing/internal/jsonl"
 )
 
-// HTTPPort is the port the HTTP server listens on
-const HTTPPort = 8374
+// DefaultHTTPPort is the preferred port for the HTTP server
+const DefaultHTTPPort = 8374
 
 // Config holds daemon configuration
 type Config struct {
@@ -145,9 +146,22 @@ func (d *Daemon) run() error {
 	d.httpServer = NewHTTPServer(store, d.config.WorkspaceDir, d.config.StaticFS)
 
 	go func() {
-		addr := fmt.Sprintf(":%d", HTTPPort)
-		fmt.Printf("HTTP server listening on http://localhost%s\n", addr)
-		if err := http.ListenAndServe(addr, d.httpServer.Handler()); err != nil {
+		// Try preferred port first, fall back to any available port
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", DefaultHTTPPort))
+		if err != nil {
+			listener, err = net.Listen("tcp", ":0")
+			if err != nil {
+				fmt.Printf("HTTP server error: %v\n", err)
+				return
+			}
+		}
+
+		port := listener.Addr().(*net.TCPAddr).Port
+		portFile := filepath.Join(d.config.BearingDir, "http.port")
+		os.WriteFile(portFile, []byte(fmt.Sprintf("%d", port)), 0644)
+
+		fmt.Printf("HTTP server listening on http://localhost:%d\n", port)
+		if err := http.Serve(listener, d.httpServer.Handler()); err != nil {
 			fmt.Printf("HTTP server error: %v\n", err)
 		}
 	}()

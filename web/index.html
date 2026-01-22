@@ -47,6 +47,7 @@
     <span><kbd>r</kbd>efresh</span>
     <span><kbd>o</kbd>pen PR</span>
     <span><kbd>p</kbd>lans</span>
+    <span><kbd>/</kbd> search</span>
     <span><kbd>?</kbd> help</span>
     <span class="footer-spacer"></span>
     <span id="status-indicator" class="status-ok" title="Connected"></span>
@@ -72,6 +73,7 @@
         <div class="binding"><kbd>r</kbd> Refresh data</div>
         <div class="binding"><kbd>o</kbd> Open PR in browser</div>
         <div class="binding"><kbd>p</kbd> View plans</div>
+        <div class="binding"><kbd>/</kbd> or <kbd>Ctrl+K</kbd> Command palette</div>
         <div class="binding"><kbd>?</kbd> Show this help</div>
         <div class="binding"><kbd>Esc</kbd> Close modal</div>
       </div>
@@ -83,6 +85,14 @@
     <div class="modal-content modal-wide">
       <h2>Plans <span class="modal-hint">(press o to open issue, Esc to close)</span></h2>
       <div id="plans-list" class="list" tabindex="0"></div>
+    </div>
+  </div>
+
+  <!-- Command Palette Modal -->
+  <div id="command-palette" class="modal hidden">
+    <div class="modal-content command-palette-content">
+      <input type="text" id="palette-input" placeholder="Search projects, worktrees, plans..." autocomplete="off">
+      <div id="palette-results" class="palette-results"></div>
     </div>
   </div>
 
