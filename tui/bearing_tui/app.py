@@ -116,7 +116,7 @@ class BearingApp(App):
     """Bearing worktree management TUI."""
 
     CSS_PATH = "styles/app.tcss"
-    TITLE = "Bearing"
+    TITLE = "⚓ Bearing [dev-check]"
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
@@ -162,13 +162,13 @@ class BearingApp(App):
 
     def compose(self) -> ComposeResult:
         """Create the app layout."""
-        yield Static("\u2693 Bearing", id="title")
+        yield Static("\u2693 Bearing [dev-check]", id="title")
         with Horizontal(id="main-container"):
             with Vertical(id="projects-panel"):
-                yield Label("[0] Projects", classes="panel-header")
+                yield Label("[0] Projects [dev-check]", classes="panel-header")
                 yield ProjectList(id="project-list")
             with Vertical(id="worktrees-panel"):
-                yield Label("[1] Worktrees", classes="panel-header")
+                yield Label("[1] Worktrees [dev-check]", classes="panel-header")
                 yield WorktreeTable(id="worktree-table")
         yield Label("[2] Details", classes="panel-header details-header")
         yield DetailsPanel(id="details-panel")
