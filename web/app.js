@@ -1,6 +1,6 @@
 // Bearing Web Dashboard - Vanilla JS Application
 
-const API_BASE = '';
+const API_BASE = 'http://localhost:8374';
 
 // State
 const state = {
