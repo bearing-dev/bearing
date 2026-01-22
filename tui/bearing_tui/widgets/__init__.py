@@ -6,6 +6,7 @@ from .details import HealthEntry as DetailsHealthEntry
 from .plans import PlansList, load_plans
 from .plans import PlanEntry as LegacyPlanEntry
 from .plans_table import PlansTable, PlanEntry
+from .prs import PRsTable, PRDisplayEntry
 
 __all__ = [
     "ProjectList",
@@ -20,4 +21,6 @@ __all__ = [
     "PlanEntry",
     "LegacyPlanEntry",
     "load_plans",
+    "PRsTable",
+    "PRDisplayEntry",
 ]
