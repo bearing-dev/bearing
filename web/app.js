@@ -16,6 +16,8 @@ const state = {
   worktreeIndex: 0,
   planIndex: 0,
   evtSource: null,
+  sortColumn: 'default',
+  sortDirection: 'asc',
 };
 
 // DOM elements
@@ -113,8 +115,65 @@ function renderProjects() {
   `).join('');
 }
 
+function sortWorktrees(worktrees) {
+  const sorted = [...worktrees];
+  const dir = state.sortDirection === 'asc' ? 1 : -1;
+
+  if (state.sortColumn === 'default') {
+    // Default: PR state (OPEN first), then dirty, then folder
+    sorted.sort((a, b) => {
+      const prOrder = { OPEN: 0, DRAFT: 1, MERGED: 2, CLOSED: 3 };
+      const aPr = prOrder[a.prState] ?? 4;
+      const bPr = prOrder[b.prState] ?? 4;
+      if (aPr !== bPr) return (aPr - bPr) * dir;
+      if (a.dirty !== b.dirty) return (b.dirty - a.dirty) * dir;
+      return a.folder.localeCompare(b.folder) * dir;
+    });
+  } else if (state.sortColumn === 'folder') {
+    sorted.sort((a, b) => a.folder.localeCompare(b.folder) * dir);
+  } else if (state.sortColumn === 'branch') {
+    sorted.sort((a, b) => a.branch.localeCompare(b.branch) * dir);
+  } else if (state.sortColumn === 'status') {
+    sorted.sort((a, b) => {
+      // dirty first, then unpushed, then clean
+      const aScore = a.dirty ? 0 : (a.unpushed > 0 ? 1 : 2);
+      const bScore = b.dirty ? 0 : (b.unpushed > 0 ? 1 : 2);
+      return (aScore - bScore) * dir;
+    });
+  } else if (state.sortColumn === 'pr') {
+    const prOrder = { OPEN: 0, DRAFT: 1, MERGED: 2, CLOSED: 3 };
+    sorted.sort((a, b) => {
+      const aPr = prOrder[a.prState] ?? 4;
+      const bPr = prOrder[b.prState] ?? 4;
+      return (aPr - bPr) * dir;
+    });
+  }
+
+  return sorted;
+}
+
+function handleSort(column) {
+  if (state.sortColumn === column) {
+    state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.sortColumn = column;
+    state.sortDirection = 'asc';
+  }
+  updateSortIndicators();
+  renderWorktrees();
+}
+
+function updateSortIndicators() {
+  document.querySelectorAll('.table-header [data-sort]').forEach(el => {
+    el.classList.remove('sort-asc', 'sort-desc');
+    if (el.dataset.sort === state.sortColumn) {
+      el.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
 function renderWorktrees() {
-  const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
+  const filtered = sortWorktrees(state.worktrees.filter(w => w.repo === state.selectedProject));
 
   els.worktreeRows.innerHTML = filtered.map((w, i) => {
     const statusParts = [];
@@ -397,6 +456,11 @@ function handleEnter() {
 
 // Click handlers
 function setupClickHandlers() {
+  // Sort header clicks
+  document.querySelectorAll('.table-header [data-sort]').forEach(el => {
+    el.addEventListener('click', () => handleSort(el.dataset.sort));
+  });
+
   els.projectList.addEventListener('click', (e) => {
     const item = e.target.closest('.list-item');
     if (item) {

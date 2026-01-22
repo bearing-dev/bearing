@@ -222,6 +222,28 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.table-header .sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.table-header .sortable:hover {
+  color: var(--text-bright);
+}
+
+.table-header .sortable::after {
+  content: '';
+  margin-left: 4px;
+}
+
+.table-header .sortable.sort-asc::after {
+  content: '\25B2';
+}
+
+.table-header .sortable.sort-desc::after {
+  content: '\25BC';
+}
+
 .table-body {
   flex: 1;
   overflow-y: auto;
