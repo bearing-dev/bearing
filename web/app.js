@@ -46,14 +46,51 @@ function init() {
   els.plansModal = document.getElementById('plans-modal');
   els.plansList = document.getElementById('plans-list');
 
+  // Restore persisted state
+  loadState();
+
   // Setup event listeners
   setupKeyboardNavigation();
   setupClickHandlers();
   setupTabHandlers();
   connectSSE();
 
+  // Restore view and sort indicators
+  if (state.currentView !== 'worktrees') {
+    switchView(state.currentView);
+  }
+  updateSortIndicators();
+
   // Initial data load
   refresh();
+}
+
+// State persistence
+function saveState() {
+  const persisted = {
+    selectedProject: state.selectedProject,
+    worktreeIndex: state.worktreeIndex,
+    sortColumn: state.sortColumn,
+    sortDirection: state.sortDirection,
+    currentView: state.currentView,
+  };
+  localStorage.setItem('bearing-state', JSON.stringify(persisted));
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('bearing-state');
+    if (saved) {
+      const persisted = JSON.parse(saved);
+      state.selectedProject = persisted.selectedProject || null;
+      state.worktreeIndex = persisted.worktreeIndex || 0;
+      state.sortColumn = persisted.sortColumn || 'default';
+      state.sortDirection = persisted.sortDirection || 'asc';
+      state.currentView = persisted.currentView || 'worktrees';
+    }
+  } catch (e) {
+    console.warn('Failed to load persisted state:', e);
+  }
 }
 
 // Data fetching
@@ -161,6 +198,7 @@ function handleSort(column) {
   }
   updateSortIndicators();
   renderWorktrees();
+  saveState();
 }
 
 function updateSortIndicators() {
@@ -275,6 +313,7 @@ function selectProject(name) {
   });
 
   renderWorktrees();
+  saveState();
 }
 
 function selectWorktree(index) {
@@ -288,6 +327,7 @@ function selectWorktree(index) {
   });
 
   updateDetails(filtered[index]);
+  saveState();
 }
 
 // Keyboard navigation
@@ -663,4 +703,5 @@ switchView = function(view) {
     placeholder.style.display = 'none';
   }
   originalSwitchView(view);
+  saveState();
 };
