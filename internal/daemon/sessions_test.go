@@ -7,6 +7,17 @@ import (
 	"time"
 )
 
+func TestNewSessionScanner_DefaultPath(t *testing.T) {
+	scanner := NewSessionScanner("/some/workspace")
+
+	homeDir, _ := os.UserHomeDir()
+	expectedClaudeDir := filepath.Join(homeDir, ".claude", "projects")
+
+	if scanner.claudeDir != expectedClaudeDir {
+		t.Errorf("claudeDir = %q, want %q", scanner.claudeDir, expectedClaudeDir)
+	}
+}
+
 func TestPathToClaudeDir(t *testing.T) {
 	tests := []struct {
 		input    string

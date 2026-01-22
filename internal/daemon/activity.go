@@ -4,9 +4,19 @@ import (
 	"time"
 
 	"github.com/joshribakoff/bearing/internal/gh"
-	"github.com/joshribakoff/bearing/internal/git"
 	"github.com/joshribakoff/bearing/internal/jsonl"
 )
+
+// GHClient interface for GitHub operations used by ActivityTracker
+type GHClient interface {
+	GetPR(branch string) (*gh.PRInfo, error)
+}
+
+// GitRepo interface for git operations used by ActivityTracker
+type GitRepo interface {
+	HeadCommit() (string, error)
+	CommitMessage(commit string) (string, error)
+}
 
 // ActivityTracker tracks workspace activity events
 type ActivityTracker struct {
@@ -25,14 +35,14 @@ func NewActivityTracker(store *jsonl.Store) *ActivityTracker {
 }
 
 // CheckForActivity checks a worktree for new activity and emits events
-func (t *ActivityTracker) CheckForActivity(folderPath string, entry jsonl.LocalEntry, ghClient *gh.Client, repo *git.Repo) {
+func (t *ActivityTracker) CheckForActivity(folderPath string, entry jsonl.LocalEntry, ghClient GHClient, repo GitRepo) {
 	if !entry.Base {
 		t.checkPRActivity(folderPath, entry, ghClient)
 	}
 	t.checkCommitActivity(folderPath, entry, repo)
 }
 
-func (t *ActivityTracker) checkPRActivity(folderPath string, entry jsonl.LocalEntry, ghClient *gh.Client) {
+func (t *ActivityTracker) checkPRActivity(folderPath string, entry jsonl.LocalEntry, ghClient GHClient) {
 	pr, err := ghClient.GetPR(entry.Branch)
 	if err != nil || pr == nil {
 		return
@@ -76,7 +86,7 @@ func (t *ActivityTracker) checkPRActivity(folderPath string, entry jsonl.LocalEn
 	t.prStates[entry.Folder] = currentState
 }
 
-func (t *ActivityTracker) checkCommitActivity(folderPath string, entry jsonl.LocalEntry, repo *git.Repo) {
+func (t *ActivityTracker) checkCommitActivity(folderPath string, entry jsonl.LocalEntry, repo GitRepo) {
 	commit, err := repo.HeadCommit()
 	if err != nil {
 		return

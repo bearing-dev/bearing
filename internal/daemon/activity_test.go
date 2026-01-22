@@ -1,17 +1,13 @@
 package daemon
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/joshribakoff/bearing/internal/gh"
-	"github.com/joshribakoff/bearing/internal/git"
 	"github.com/joshribakoff/bearing/internal/jsonl"
 )
 
-// MockGHClient implements a mock GitHub client for testing
+// MockGHClient implements GHClient interface for testing
 type MockGHClient struct {
 	PR    *gh.PRInfo
 	Error error
@@ -21,7 +17,7 @@ func (m *MockGHClient) GetPR(branch string) (*gh.PRInfo, error) {
 	return m.PR, m.Error
 }
 
-// MockRepo implements a mock git repo for testing
+// MockRepo implements GitRepo interface for testing
 type MockRepo struct {
 	Commit  string
 	Message string
@@ -36,12 +32,8 @@ func (m *MockRepo) CommitMessage(commit string) (string, error) {
 	return m.Message, m.Error
 }
 
-// TestActivityTracker_PRStateChanges tests PR state change detection
+// TestActivityTracker_PRStateChanges tests PR state change detection via CheckForActivity
 func TestActivityTracker_PRStateChanges(t *testing.T) {
-	tmpDir := t.TempDir()
-	store := jsonl.NewStore(tmpDir)
-	tracker := NewActivityTracker(store)
-
 	entry := jsonl.LocalEntry{
 		Folder: "test-worktree",
 		Repo:   "owner/repo",
@@ -50,81 +42,113 @@ func TestActivityTracker_PRStateChanges(t *testing.T) {
 	}
 
 	t.Run("first check records state without emitting event", func(t *testing.T) {
-		// We can't easily mock gh.Client, so we test the tracker state directly
-		// by calling the internal state map
-		tracker.prStates["test-worktree"] = "OPEN"
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
+
+		mockGH := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 42, Title: "Test PR"}}
+		mockRepo := &MockRepo{Commit: "abc1234", Message: "Initial commit"}
+
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
 
 		events, _ := store.ReadActivity()
-		initialCount := len(events)
-
-		// Verify no new events were written on first check
-		events, _ = store.ReadActivity()
-		if len(events) != initialCount {
-			t.Errorf("expected no new events on first check, got %d new", len(events)-initialCount)
+		if len(events) != 0 {
+			t.Errorf("expected no events on first check, got %d", len(events))
 		}
 	})
 
 	t.Run("state change from OPEN to MERGED emits pr_merged", func(t *testing.T) {
-		// Reset tracker for clean test
-		tracker = NewActivityTracker(store)
-		tracker.prStates["test-worktree"] = "OPEN"
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
 
-		// Simulate state change detection by calling checkPRActivity logic manually
-		// Since we can't mock the actual GH client easily, we test the event writing
-		event := jsonl.ActivityEvent{
-			Timestamp: time.Now().UTC(),
-			Type:      "pr_merged",
-			Repo:      entry.Repo,
-			Branch:    entry.Branch,
-			PRNumber:  42,
-			Title:     "Test PR",
-		}
-		store.AppendActivity(event)
+		mockGH := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 42, Title: "Test PR"}}
+		mockRepo := &MockRepo{Commit: "abc1234", Message: "Initial commit"}
+
+		// First check - records state
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
+		// Change state to MERGED
+		mockGH.PR.State = "MERGED"
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
 
 		events, err := store.ReadActivity()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		found := false
-		for _, e := range events {
-			if e.Type == "pr_merged" && e.PRNumber == 42 {
-				found = true
-				if e.Repo != "owner/repo" {
-					t.Errorf("expected repo owner/repo, got %s", e.Repo)
-				}
-				if e.Branch != "feature-branch" {
-					t.Errorf("expected branch feature-branch, got %s", e.Branch)
-				}
-			}
+		if len(events) != 1 {
+			t.Fatalf("expected 1 event, got %d", len(events))
 		}
-		if !found {
-			t.Error("pr_merged event not found")
+		if events[0].Type != "pr_merged" {
+			t.Errorf("expected pr_merged event, got %s", events[0].Type)
+		}
+		if events[0].PRNumber != 42 {
+			t.Errorf("expected PR number 42, got %d", events[0].PRNumber)
+		}
+		if events[0].Repo != "owner/repo" {
+			t.Errorf("expected repo owner/repo, got %s", events[0].Repo)
+		}
+		if events[0].Branch != "feature-branch" {
+			t.Errorf("expected branch feature-branch, got %s", events[0].Branch)
 		}
 	})
 
-	// Cleanup for next test
-	os.Remove(store.ActivityPath())
+	t.Run("state change from OPEN to CLOSED emits pr_closed", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
+
+		mockGH := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 99, Title: "Close me"}}
+		mockRepo := &MockRepo{Commit: "abc1234"}
+
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+		mockGH.PR.State = "CLOSED"
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
+		events, _ := store.ReadActivity()
+		if len(events) != 1 || events[0].Type != "pr_closed" {
+			t.Errorf("expected pr_closed event, got %v", events)
+		}
+	})
 
 	t.Run("no event when state unchanged", func(t *testing.T) {
-		tracker = NewActivityTracker(store)
-		tracker.prStates["test-worktree"] = "OPEN"
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
 
-		// Simulate same state check - no event should be written
-		// The tracker only writes when state changes
+		mockGH := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 42}}
+		mockRepo := &MockRepo{Commit: "abc1234"}
+
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
 		events, _ := store.ReadActivity()
 		if len(events) != 0 {
-			t.Errorf("expected 0 events, got %d", len(events))
+			t.Errorf("expected 0 events for unchanged state, got %d", len(events))
+		}
+	})
+
+	t.Run("no PR found does not emit event", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
+
+		mockGH := &MockGHClient{PR: nil, Error: nil}
+		mockRepo := &MockRepo{Commit: "abc1234"}
+
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
+		events, _ := store.ReadActivity()
+		if len(events) != 0 {
+			t.Errorf("expected 0 events when no PR, got %d", len(events))
 		}
 	})
 }
 
-// TestActivityTracker_CommitDetection tests commit change detection
+// TestActivityTracker_CommitDetection tests commit change detection via CheckForActivity
 func TestActivityTracker_CommitDetection(t *testing.T) {
-	tmpDir := t.TempDir()
-	store := jsonl.NewStore(tmpDir)
-	tracker := NewActivityTracker(store)
-
 	entry := jsonl.LocalEntry{
 		Folder: "test-worktree",
 		Repo:   "owner/repo",
@@ -133,8 +157,14 @@ func TestActivityTracker_CommitDetection(t *testing.T) {
 	}
 
 	t.Run("first commit check records without emitting event", func(t *testing.T) {
-		// Set initial commit state
-		tracker.commits["test-worktree"] = "abc1234"
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
+
+		mockGH := &MockGHClient{PR: nil}
+		mockRepo := &MockRepo{Commit: "abc1234", Message: "Initial commit"}
+
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
 
 		events, _ := store.ReadActivity()
 		if len(events) != 0 {
@@ -143,47 +173,79 @@ func TestActivityTracker_CommitDetection(t *testing.T) {
 	})
 
 	t.Run("new commit emits commit_pushed event", func(t *testing.T) {
-		// Simulate commit change by writing event directly
-		event := jsonl.ActivityEvent{
-			Timestamp: time.Now().UTC(),
-			Type:      "commit_pushed",
-			Repo:      entry.Repo,
-			Branch:    entry.Branch,
-			Commit:    "def5678",
-			Message:   "Add new feature",
-		}
-		store.AppendActivity(event)
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
+
+		mockGH := &MockGHClient{PR: nil}
+		mockRepo := &MockRepo{Commit: "abc1234", Message: "Initial commit"}
+
+		// First check
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
+		// New commit
+		mockRepo.Commit = "def5678"
+		mockRepo.Message = "Add new feature"
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
 
 		events, err := store.ReadActivity()
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		found := false
-		for _, e := range events {
-			if e.Type == "commit_pushed" && e.Commit == "def5678" {
-				found = true
-				if e.Message != "Add new feature" {
-					t.Errorf("expected message 'Add new feature', got %s", e.Message)
-				}
-			}
+		if len(events) != 1 {
+			t.Fatalf("expected 1 event, got %d", len(events))
 		}
-		if !found {
-			t.Error("commit_pushed event not found")
+		if events[0].Type != "commit_pushed" {
+			t.Errorf("expected commit_pushed, got %s", events[0].Type)
+		}
+		if events[0].Commit != "def5678" {
+			t.Errorf("expected commit def5678, got %s", events[0].Commit)
+		}
+		if events[0].Message != "Add new feature" {
+			t.Errorf("expected message 'Add new feature', got %s", events[0].Message)
 		}
 	})
 
-	// Cleanup
-	os.Remove(store.ActivityPath())
-
 	t.Run("same commit does not emit event", func(t *testing.T) {
-		tracker = NewActivityTracker(store)
-		tracker.commits["test-worktree"] = "abc1234"
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
 
-		// Same commit - no event
+		mockGH := &MockGHClient{PR: nil}
+		mockRepo := &MockRepo{Commit: "abc1234"}
+
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
 		events, _ := store.ReadActivity()
 		if len(events) != 0 {
 			t.Errorf("expected 0 events for same commit, got %d", len(events))
+		}
+	})
+
+	t.Run("multiple commits emit multiple events", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		store := jsonl.NewStore(tmpDir)
+		tracker := NewActivityTracker(store)
+
+		mockGH := &MockGHClient{PR: nil}
+		mockRepo := &MockRepo{Commit: "commit1", Message: "First"}
+
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
+		mockRepo.Commit = "commit2"
+		mockRepo.Message = "Second"
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
+		mockRepo.Commit = "commit3"
+		mockRepo.Message = "Third"
+		tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+
+		events, _ := store.ReadActivity()
+		if len(events) != 2 {
+			t.Errorf("expected 2 events, got %d", len(events))
 		}
 	})
 }
@@ -198,217 +260,37 @@ func TestActivityTracker_BaseWorktreeSkipsPR(t *testing.T) {
 		Folder: "base-worktree",
 		Repo:   "owner/repo",
 		Branch: "main",
-		Base:   true, // Base worktree
+		Base:   true,
 	}
 
-	// For base worktrees, CheckForActivity should skip PR checks
-	// but still check commits
-	ghClient := &gh.Client{}
-	repo := &git.Repo{}
+	// Mock returns PR - but it should be ignored for base worktrees
+	mockGH := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 1}}
+	mockRepo := &MockRepo{Commit: "abc1234"}
 
-	// This should not panic and should skip PR activity for base worktrees
-	// We're testing that the Base flag is respected
-	tracker.CheckForActivity("/path/to/worktree", entry, ghClient, repo)
+	// First call
+	tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
+	// Change PR state - should NOT trigger event for base worktree
+	mockGH.PR.State = "MERGED"
+	tracker.CheckForActivity("/path/to/worktree", entry, mockGH, mockRepo)
 
-	// Base worktrees shouldn't have PR state tracked
-	if _, exists := tracker.prStates["base-worktree"]; exists {
-		t.Error("base worktree should not have PR state tracked")
-	}
-}
-
-// TestActivityEvent_Format tests the ActivityEvent struct format
-func TestActivityEvent_Format(t *testing.T) {
-	tmpDir := t.TempDir()
-	store := jsonl.NewStore(tmpDir)
-
-	tests := []struct {
-		name     string
-		event    jsonl.ActivityEvent
-		wantType string
-	}{
-		{
-			name: "pr_opened event",
-			event: jsonl.ActivityEvent{
-				Timestamp: time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
-				Type:      "pr_opened",
-				Repo:      "owner/repo",
-				Branch:    "feature-1",
-				PRNumber:  123,
-				Title:     "Add feature",
-			},
-			wantType: "pr_opened",
-		},
-		{
-			name: "pr_merged event",
-			event: jsonl.ActivityEvent{
-				Timestamp: time.Date(2024, 1, 15, 11, 0, 0, 0, time.UTC),
-				Type:      "pr_merged",
-				Repo:      "owner/repo",
-				Branch:    "feature-1",
-				PRNumber:  123,
-				Title:     "Add feature",
-			},
-			wantType: "pr_merged",
-		},
-		{
-			name: "pr_closed event",
-			event: jsonl.ActivityEvent{
-				Timestamp: time.Date(2024, 1, 15, 11, 30, 0, 0, time.UTC),
-				Type:      "pr_closed",
-				Repo:      "owner/repo",
-				Branch:    "feature-2",
-				PRNumber:  124,
-				Title:     "WIP feature",
-			},
-			wantType: "pr_closed",
-		},
-		{
-			name: "commit_pushed event",
-			event: jsonl.ActivityEvent{
-				Timestamp: time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC),
-				Type:      "commit_pushed",
-				Repo:      "owner/repo",
-				Branch:    "feature-1",
-				Commit:    "abc1234",
-				Message:   "Fix bug",
-			},
-			wantType: "commit_pushed",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean slate
-			os.Remove(store.ActivityPath())
-
-			err := store.AppendActivity(tt.event)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			events, err := store.ReadActivity()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if len(events) != 1 {
-				t.Fatalf("expected 1 event, got %d", len(events))
-			}
-
-			e := events[0]
-			if e.Type != tt.wantType {
-				t.Errorf("type = %q, want %q", e.Type, tt.wantType)
-			}
-			if e.Repo != tt.event.Repo {
-				t.Errorf("repo = %q, want %q", e.Repo, tt.event.Repo)
-			}
-			if e.Branch != tt.event.Branch {
-				t.Errorf("branch = %q, want %q", e.Branch, tt.event.Branch)
-			}
-		})
+	events, _ := store.ReadActivity()
+	// Should have no PR events (base worktrees skip PR checks)
+	for _, e := range events {
+		if e.Type == "pr_merged" || e.Type == "pr_opened" || e.Type == "pr_closed" {
+			t.Errorf("base worktree should not emit PR events, got %s", e.Type)
+		}
 	}
 }
 
-// TestActivityTracker_EdgeCases tests edge cases
-func TestActivityTracker_EdgeCases(t *testing.T) {
-	t.Run("empty folder path", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		store := jsonl.NewStore(tmpDir)
-		tracker := NewActivityTracker(store)
-
-		entry := jsonl.LocalEntry{
-			Folder: "",
-			Repo:   "owner/repo",
-			Branch: "main",
-			Base:   false,
-		}
-
-		// Should not panic with empty folder
-		ghClient := &gh.Client{}
-		repo := &git.Repo{}
-		tracker.CheckForActivity("", entry, ghClient, repo)
-	})
-
-	t.Run("multiple folders tracked independently", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		store := jsonl.NewStore(tmpDir)
-		tracker := NewActivityTracker(store)
-
-		// Track different folders with different states
-		tracker.prStates["folder-a"] = "OPEN"
-		tracker.prStates["folder-b"] = "MERGED"
-		tracker.commits["folder-a"] = "commit-a"
-		tracker.commits["folder-b"] = "commit-b"
-
-		if tracker.prStates["folder-a"] != "OPEN" {
-			t.Error("folder-a state not tracked correctly")
-		}
-		if tracker.prStates["folder-b"] != "MERGED" {
-			t.Error("folder-b state not tracked correctly")
-		}
-		if tracker.commits["folder-a"] != "commit-a" {
-			t.Error("folder-a commit not tracked correctly")
-		}
-		if tracker.commits["folder-b"] != "commit-b" {
-			t.Error("folder-b commit not tracked correctly")
-		}
-	})
-
-	t.Run("activity file created on first write", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		store := jsonl.NewStore(tmpDir)
-
-		activityPath := store.ActivityPath()
-		if _, err := os.Stat(activityPath); !os.IsNotExist(err) {
-			t.Error("activity file should not exist before first write")
-		}
-
-		event := jsonl.ActivityEvent{
-			Timestamp: time.Now().UTC(),
-			Type:      "test_event",
-			Repo:      "test/repo",
-			Branch:    "test-branch",
-		}
-		err := store.AppendActivity(event)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if _, err := os.Stat(activityPath); os.IsNotExist(err) {
-			t.Error("activity file should exist after first write")
-		}
-	})
-
-	t.Run("multiple events appended correctly", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		store := jsonl.NewStore(tmpDir)
-
-		for i := 0; i < 5; i++ {
-			event := jsonl.ActivityEvent{
-				Timestamp: time.Now().UTC(),
-				Type:      "commit_pushed",
-				Repo:      "test/repo",
-				Branch:    "test-branch",
-				Commit:    filepath.Base(t.Name()) + string(rune('a'+i)),
-			}
-			if err := store.AppendActivity(event); err != nil {
-				t.Fatal(err)
-			}
-		}
-
-		events, err := store.ReadActivity()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if len(events) != 5 {
-			t.Errorf("expected 5 events, got %d", len(events))
-		}
-	})
-}
-
-// TestActivityTracker_PRStateTransitions tests all valid PR state transitions
+// TestActivityTracker_PRStateTransitions tests all valid PR state transitions end-to-end
 func TestActivityTracker_PRStateTransitions(t *testing.T) {
+	entry := jsonl.LocalEntry{
+		Folder: "test-worktree",
+		Repo:   "owner/repo",
+		Branch: "feature-branch",
+		Base:   false,
+	}
+
 	tests := []struct {
 		name       string
 		fromState  string
@@ -422,31 +304,119 @@ func TestActivityTracker_PRStateTransitions(t *testing.T) {
 		{"CLOSED to OPEN", "CLOSED", "OPEN", "pr_opened", true},
 		{"OPEN to OPEN", "OPEN", "OPEN", "", false},
 		{"MERGED to MERGED", "MERGED", "MERGED", "", false},
-		{"unknown state", "OPEN", "UNKNOWN", "", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test the state transition logic
-			var eventType string
-			if tt.fromState != tt.toState {
-				switch tt.toState {
-				case "OPEN":
-					eventType = "pr_opened"
-				case "MERGED":
-					eventType = "pr_merged"
-				case "CLOSED":
-					eventType = "pr_closed"
+			tmpDir := t.TempDir()
+			store := jsonl.NewStore(tmpDir)
+			tracker := NewActivityTracker(store)
+
+			mockGH := &MockGHClient{PR: &gh.PRInfo{State: tt.fromState, Number: 42}}
+			mockRepo := &MockRepo{Commit: "abc1234"}
+
+			// First check - records state
+			tracker.CheckForActivity("/path", entry, mockGH, mockRepo)
+
+			// Change state
+			mockGH.PR.State = tt.toState
+			tracker.CheckForActivity("/path", entry, mockGH, mockRepo)
+
+			events, _ := store.ReadActivity()
+
+			if tt.shouldEmit {
+				if len(events) != 1 {
+					t.Fatalf("expected 1 event, got %d", len(events))
+				}
+				if events[0].Type != tt.wantEvent {
+					t.Errorf("expected %s, got %s", tt.wantEvent, events[0].Type)
+				}
+			} else {
+				if len(events) != 0 {
+					t.Errorf("expected no events, got %d", len(events))
 				}
 			}
-
-			if tt.shouldEmit && eventType != tt.wantEvent {
-				t.Errorf("expected event %q, got %q", tt.wantEvent, eventType)
-			}
-			if !tt.shouldEmit && eventType != "" && tt.toState != "UNKNOWN" {
-				t.Errorf("expected no event, got %q", eventType)
-			}
 		})
+	}
+}
+
+// TestActivityTracker_MultipleFolders tests independent tracking per folder
+func TestActivityTracker_MultipleFolders(t *testing.T) {
+	tmpDir := t.TempDir()
+	store := jsonl.NewStore(tmpDir)
+	tracker := NewActivityTracker(store)
+
+	entryA := jsonl.LocalEntry{Folder: "folder-a", Repo: "owner/repo-a", Branch: "branch-a", Base: false}
+	entryB := jsonl.LocalEntry{Folder: "folder-b", Repo: "owner/repo-b", Branch: "branch-b", Base: false}
+
+	mockGHA := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 1}}
+	mockGHB := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 2}}
+	mockRepoA := &MockRepo{Commit: "commit-a"}
+	mockRepoB := &MockRepo{Commit: "commit-b"}
+
+	// First checks - record state
+	tracker.CheckForActivity("/path/a", entryA, mockGHA, mockRepoA)
+	tracker.CheckForActivity("/path/b", entryB, mockGHB, mockRepoB)
+
+	// Change only folder-a's PR state
+	mockGHA.PR.State = "MERGED"
+	tracker.CheckForActivity("/path/a", entryA, mockGHA, mockRepoA)
+	tracker.CheckForActivity("/path/b", entryB, mockGHB, mockRepoB)
+
+	events, _ := store.ReadActivity()
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].Repo != "owner/repo-a" {
+		t.Errorf("expected event from repo-a, got %s", events[0].Repo)
+	}
+}
+
+// TestActivityTracker_CombinedPRAndCommit tests PR and commit events in same check
+func TestActivityTracker_CombinedPRAndCommit(t *testing.T) {
+	tmpDir := t.TempDir()
+	store := jsonl.NewStore(tmpDir)
+	tracker := NewActivityTracker(store)
+
+	entry := jsonl.LocalEntry{
+		Folder: "test-worktree",
+		Repo:   "owner/repo",
+		Branch: "feature-branch",
+		Base:   false,
+	}
+
+	mockGH := &MockGHClient{PR: &gh.PRInfo{State: "OPEN", Number: 42}}
+	mockRepo := &MockRepo{Commit: "abc1234", Message: "Initial"}
+
+	// First check
+	tracker.CheckForActivity("/path", entry, mockGH, mockRepo)
+
+	// Both PR and commit change
+	mockGH.PR.State = "MERGED"
+	mockRepo.Commit = "def5678"
+	mockRepo.Message = "Final commit"
+	tracker.CheckForActivity("/path", entry, mockGH, mockRepo)
+
+	events, _ := store.ReadActivity()
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
+	}
+
+	hasCommit := false
+	hasPR := false
+	for _, e := range events {
+		if e.Type == "commit_pushed" {
+			hasCommit = true
+		}
+		if e.Type == "pr_merged" {
+			hasPR = true
+		}
+	}
+	if !hasCommit {
+		t.Error("missing commit_pushed event")
+	}
+	if !hasPR {
+		t.Error("missing pr_merged event")
 	}
 }
 
@@ -467,11 +437,5 @@ func TestNewActivityTracker(t *testing.T) {
 	}
 	if tracker.commits == nil {
 		t.Error("commits map not initialized")
-	}
-	if len(tracker.prStates) != 0 {
-		t.Error("prStates should be empty initially")
-	}
-	if len(tracker.commits) != 0 {
-		t.Error("commits should be empty initially")
 	}
 }

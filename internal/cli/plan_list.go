@@ -171,19 +171,23 @@ func runPlanList(cmd *cobra.Command, args []string) error {
 	return w.Flush()
 }
 
-func runPlanSearch(cmd *cobra.Command, args []string) error {
-	query := strings.ToLower(args[0])
+// matchesSearch returns true if the plan matches the search query (case-insensitive)
+func matchesSearch(plan *planListInfo, query string) bool {
+	query = strings.ToLower(query)
+	return strings.Contains(strings.ToLower(plan.Title), query) ||
+		strings.Contains(strings.ToLower(plan.Content), query)
+}
 
+func runPlanSearch(cmd *cobra.Command, args []string) error {
 	plans, err := loadPlans("")
 	if err != nil {
 		return err
 	}
 
+	query := args[0]
 	var matches []*planListInfo
 	for _, p := range plans {
-		titleLower := strings.ToLower(p.Title)
-		contentLower := strings.ToLower(p.Content)
-		if strings.Contains(titleLower, query) || strings.Contains(contentLower, query) {
+		if matchesSearch(p, query) {
 			matches = append(matches, p)
 		}
 	}

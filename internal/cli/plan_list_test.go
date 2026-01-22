@@ -379,173 +379,80 @@ func TestLoadPlans_NonexistentProject(t *testing.T) {
 	}
 }
 
-// Search tests
+// Search tests - use matchesSearch directly to test the actual implementation
 
-func TestPlanSearch_MatchesTitle(t *testing.T) {
-	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
-
-	projectDir := filepath.Join(tmpDir, "Projects", "plans", "testproject")
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		t.Fatalf("failed to create project dir: %v", err)
+func TestMatchesSearch_Title(t *testing.T) {
+	plan := &planListInfo{
+		Title:   "Activity Feed Implementation",
+		Content: "Body without search term.",
 	}
-
-	plan := `---
-status: draft
----
-# Activity Feed Implementation
-
-Body without search term.
-`
-	if err := os.WriteFile(filepath.Join(projectDir, "abc12-activity.md"), []byte(plan), 0644); err != nil {
-		t.Fatalf("failed to write: %v", err)
+	if !matchesSearch(plan, "activity") {
+		t.Error("expected to match title")
 	}
-
-	plans, err := loadPlans("")
-	if err != nil {
-		t.Fatalf("failed to load: %v", err)
-	}
-	if len(plans) != 1 {
-		t.Fatalf("expected 1 plan, got %d", len(plans))
-	}
-
-	// Simulate search logic
-	query := "activity"
-	found := false
-	for _, p := range plans {
-		titleLower := strings.ToLower(p.Title)
-		if strings.Contains(titleLower, query) {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("expected to find plan by title search")
+	if !matchesSearch(plan, "Activity") {
+		t.Error("expected case-insensitive match on title")
 	}
 }
 
-func TestPlanSearch_MatchesContent(t *testing.T) {
-	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
-
-	projectDir := filepath.Join(tmpDir, "Projects", "plans", "testproject")
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		t.Fatalf("failed to create project dir: %v", err)
+func TestMatchesSearch_Content(t *testing.T) {
+	plan := &planListInfo{
+		Title:   "Generic Title",
+		Content: "This plan implements the daemon watcher feature.",
 	}
-
-	plan := `---
-status: draft
----
-# Generic Title
-
-This plan implements the daemon watcher feature.
-`
-	if err := os.WriteFile(filepath.Join(projectDir, "abc12-daemon.md"), []byte(plan), 0644); err != nil {
-		t.Fatalf("failed to write: %v", err)
+	if !matchesSearch(plan, "daemon watcher") {
+		t.Error("expected to match content")
 	}
-
-	plans, err := loadPlans("")
-	if err != nil {
-		t.Fatalf("failed to load: %v", err)
-	}
-
-	// Search for content term
-	query := "daemon watcher"
-	found := false
-	for _, p := range plans {
-		contentLower := strings.ToLower(p.Content)
-		if strings.Contains(contentLower, query) {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("expected to find plan by content search")
+	if !matchesSearch(plan, "DAEMON") {
+		t.Error("expected case-insensitive match on content")
 	}
 }
 
-func TestPlanSearch_CaseInsensitive(t *testing.T) {
-	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
-
-	projectDir := filepath.Join(tmpDir, "Projects", "plans", "testproject")
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		t.Fatalf("failed to create project dir: %v", err)
+func TestMatchesSearch_CaseInsensitive(t *testing.T) {
+	plan := &planListInfo{
+		Title:   "UPPERCASE TITLE",
+		Content: "BODY WITH UPPERCASE.",
 	}
-
-	plan := `---
-status: draft
----
-# UPPERCASE TITLE
-
-BODY WITH UPPERCASE.
-`
-	if err := os.WriteFile(filepath.Join(projectDir, "abc12-upper.md"), []byte(plan), 0644); err != nil {
-		t.Fatalf("failed to write: %v", err)
+	// Search with lowercase query against uppercase content
+	if !matchesSearch(plan, "uppercase") {
+		t.Error("expected case-insensitive search to match lowercase query against uppercase title")
 	}
-
-	plans, err := loadPlans("")
-	if err != nil {
-		t.Fatalf("failed to load: %v", err)
+	if !matchesSearch(plan, "body") {
+		t.Error("expected case-insensitive search to match lowercase query against uppercase content")
 	}
-
-	// Search with lowercase
-	query := "uppercase"
-	found := false
-	for _, p := range plans {
-		titleLower := strings.ToLower(p.Title)
-		contentLower := strings.ToLower(p.Content)
-		if strings.Contains(titleLower, query) || strings.Contains(contentLower, query) {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("expected case-insensitive search to work")
+	// Search with mixed case
+	if !matchesSearch(plan, "UpPeRcAsE") {
+		t.Error("expected case-insensitive search to match mixed case query")
 	}
 }
 
-func TestPlanSearch_NoMatch(t *testing.T) {
-	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", origHome)
-
-	projectDir := filepath.Join(tmpDir, "Projects", "plans", "testproject")
-	if err := os.MkdirAll(projectDir, 0755); err != nil {
-		t.Fatalf("failed to create project dir: %v", err)
+func TestMatchesSearch_NoMatch(t *testing.T) {
+	plan := &planListInfo{
+		Title:   "Some Plan",
+		Content: "Some content.",
 	}
-
-	plan := `---
-status: draft
----
-# Some Plan
-
-Some content.
-`
-	if err := os.WriteFile(filepath.Join(projectDir, "abc12-plan.md"), []byte(plan), 0644); err != nil {
-		t.Fatalf("failed to write: %v", err)
+	if matchesSearch(plan, "nonexistent term xyz123") {
+		t.Error("should not match nonexistent term")
 	}
+}
 
-	plans, err := loadPlans("")
-	if err != nil {
-		t.Fatalf("failed to load: %v", err)
+func TestMatchesSearch_EmptyQuery(t *testing.T) {
+	plan := &planListInfo{
+		Title:   "Some Plan",
+		Content: "Some content.",
 	}
+	// Empty query matches everything (contains "")
+	if !matchesSearch(plan, "") {
+		t.Error("empty query should match")
+	}
+}
 
-	query := "nonexistent term xyz123"
-	found := false
-	for _, p := range plans {
-		titleLower := strings.ToLower(p.Title)
-		contentLower := strings.ToLower(p.Content)
-		if strings.Contains(titleLower, query) || strings.Contains(contentLower, query) {
-			found = true
-		}
+func TestMatchesSearch_EmptyPlan(t *testing.T) {
+	plan := &planListInfo{
+		Title:   "",
+		Content: "",
 	}
-	if found {
-		t.Error("should not find match for nonexistent term")
+	if matchesSearch(plan, "anything") {
+		t.Error("should not match empty plan")
 	}
 }
 
