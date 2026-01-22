@@ -2,6 +2,22 @@
 
 Worktree management CLI for parallel AI-assisted development.
 
+## Architecture Principles
+
+**Thin TUI, fat daemon.** Business logic belongs in the daemon (Go), not the TUI (Python). The TUI is a presentation layer that reads JSONL files and calls daemon endpoints. This enables:
+- Rewriting the TUI without losing logic
+- Multiple frontends (TUI, web dashboard, CLI)
+- Testable daemon logic independent of UI
+
+**What goes where:**
+| Daemon | TUI |
+|--------|-----|
+| Health checks | Display health status |
+| PR detection | Render PR table |
+| Auto-PR creation | Show "creating..." feedback |
+| Activity tracking | Render activity feed |
+| Claude session tracking | "Attach" action (prints command) |
+
 ## Dogfooding
 
 **Always run the daemon**. If not running, start it:
