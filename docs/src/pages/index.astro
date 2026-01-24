@@ -549,10 +549,10 @@ import ThemeToggle from 'sailkit/packages/lantern/ThemeToggle.astro';
 
     <section class="hero">
       <div class="hero-badge">Works with Claude Code</div>
-      <h1>One conversation.<br/><span class="accent">Full control.</span></h1>
+      <h1>Git worktree + plan<br/><span class="accent">management tooling</span></h1>
       <p class="hero-subtitle">
-        Manage parallel AI workstreams without the chaos.
-        Worktree isolation. File-based state. You're the orchestrator.
+        A Go daemon, TUI, and Claude Code hooks for managing parallel workstreams.
+        Visualize worktrees, track plans, monitor health. Implements the <a href="https://workforest.space" style="color: var(--color-accent);">Work Forest</a> pattern.
       </p>
       <div class="hero-buttons">
         <a href="/docs/" class="btn btn-primary">
@@ -582,29 +582,29 @@ import ThemeToggle from 'sailkit/packages/lantern/ThemeToggle.astro';
 
     <section class="benefits">
       <div class="section-header">
-        <h2>Why Bearing?</h2>
-        <p>Parallelism without the pain. AI assistance without the chaos.</p>
+        <h2>What's Included</h2>
+        <p>Tooling for the Work Forest workflow.</p>
       </div>
       <div class="benefits-grid">
         <div class="benefit-card">
-          <div class="benefit-icon">🔀</div>
-          <h3>No Contention</h3>
-          <p>Background agents work in isolated git worktrees. No merge conflicts in real-time. Integrate when you're ready.</p>
+          <div class="benefit-icon">⚙️</div>
+          <h3>Go Daemon</h3>
+          <p>Background service that watches worktrees, syncs PR status, runs health checks. Writes state to JSONL files.</p>
         </div>
         <div class="benefit-card">
-          <div class="benefit-icon">📁</div>
-          <h3>No Context Bloat</h3>
-          <p>State lives in JSONL files, not your conversation. Keep your context clean. Query state with simple tools.</p>
+          <div class="benefit-icon">🖥️</div>
+          <h3>Terminal UI</h3>
+          <p>Python TUI to visualize all your worktrees and plans. Vim keybindings. See dirty files, PR status, health at a glance.</p>
         </div>
         <div class="benefit-card">
-          <div class="benefit-icon">👁️</div>
-          <h3>Full Visibility</h3>
-          <p>See all active work in one TUI. PR status, health checks, dirty files. Everything at a glance.</p>
+          <div class="benefit-icon">🪝</div>
+          <h3>Claude Code Hooks</h3>
+          <p>Pre-built hooks for worktree management, plan tracking, and session logging. Drop-in integration.</p>
         </div>
         <div class="benefit-card">
-          <div class="benefit-icon">🎮</div>
-          <h3>You're In Control</h3>
-          <p>Parallelism is opt-in. You decide when to spawn agents, what to background. No runaway swarms.</p>
+          <div class="benefit-icon">📋</div>
+          <h3>Plan Management</h3>
+          <p>File-based plans with unique IDs. Context survives session resets. Daemon indexes and syncs them.</p>
         </div>
       </div>
     </section>
@@ -640,7 +640,8 @@ import ThemeToggle from 'sailkit/packages/lantern/ThemeToggle.astro';
       <p>
         Built by <a href="https://joshribakoff.com" target="_blank" rel="noopener">Josh Ribakoff</a> •
         <a href="https://github.com/joshribakoff/bearing" target="_blank" rel="noopener">GitHub</a> •
-        <a href="/docs/">Documentation</a>
+        <a href="/docs/">Documentation</a> •
+        <a href="https://workforest.space" target="_blank" rel="noopener">Work Forest</a>
       </p>
     </footer>
   </body>
