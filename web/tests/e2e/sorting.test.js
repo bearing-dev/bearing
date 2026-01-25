@@ -18,6 +18,7 @@ test.describe('Sorting - Column Headers', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: [] }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
@@ -70,10 +71,10 @@ test.describe('Sorting - Column Headers', () => {
   });
 
   test('clicking Status header sorts by status', async ({ page }) => {
-    await page.click('[data-sort="status"]');
+    await page.click('#worktree-table [data-sort="status"]');
 
     // Verify header has sort indicator
-    await expect(page.locator('[data-sort="status"]')).toHaveClass(/sort-asc/);
+    await expect(page.locator('#worktree-table [data-sort="status"]')).toHaveClass(/sort-asc/);
 
     // Status sort order: dirty first, then unpushed, then clean
     const rows = page.locator('#worktree-rows .table-row');
@@ -113,6 +114,7 @@ test.describe('Sorting - Persistence', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: [] }));
     await page.route('**/api/events', route => route.abort());
   });
 
@@ -172,22 +174,24 @@ test.describe('Sorting - Selection Interaction', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: [] }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
     await page.waitForSelector('#worktree-rows .table-row');
   });
 
-  test('sorting preserves worktree index position', async ({ page }) => {
-    // Select second row
+  test('sorting preserves selected worktree (not index)', async ({ page }) => {
+    // Select second row and get its folder name
     await page.click('#worktree-rows .table-row:nth-child(2)');
-    await expect(page.locator('#worktree-rows .table-row.selected')).toHaveAttribute('data-index', '1');
+    const selectedFolder = await page.locator('#worktree-rows .table-row.selected').getAttribute('data-folder');
+    expect(selectedFolder).toBeTruthy();
 
     // Sort by folder
     await page.click('[data-sort="folder"]');
 
-    // Selection should still be at index 1 (same position in list)
-    await expect(page.locator('#worktree-rows .table-row.selected')).toHaveAttribute('data-index', '1');
+    // Same worktree should still be selected (folder preserved, index may change)
+    await expect(page.locator('#worktree-rows .table-row.selected')).toHaveAttribute('data-folder', selectedFolder);
   });
 
   test('details panel updates after sorting', async ({ page }) => {
@@ -208,14 +212,15 @@ test.describe('Sorting - Default Order', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: [] }));
     await page.route('**/api/events', route => route.abort());
   });
 
   test('default sort prioritizes OPEN PRs', async ({ page }) => {
-    // Clear localStorage to ensure default
-    await page.evaluate(() => localStorage.clear());
-
     await page.goto('/');
+    // Clear localStorage and reload to ensure default sort
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
     await page.waitForSelector('#worktree-rows .table-row');
 
     // First worktree with PR should be OPEN

@@ -151,6 +151,16 @@ body {
   flex: 1;
 }
 
+/* Plans Panel */
+#plans-panel {
+  flex: 1;
+}
+
+/* View panel visibility */
+.view-panel.hidden {
+  display: none;
+}
+
 /* Lists */
 .list {
   list-style: none;
@@ -270,11 +280,23 @@ body {
   font-weight: bold;
 }
 
-/* Table columns */
+/* Table columns - Worktrees */
 .col-folder { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .col-branch { flex: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .col-status { flex: 1; text-align: center; }
 .col-pr { flex: 0.8; text-align: center; }
+
+/* Table columns - Plans */
+.col-title { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-project { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-dim); }
+.col-plan-status { flex: 0.8; text-align: center; }
+.col-issue { flex: 0.6; text-align: center; color: var(--accent-cyan); }
+
+/* Plan status badges */
+.plan-status-draft { color: var(--text-dim); }
+.plan-status-active { color: var(--accent-green); }
+.plan-status-done { color: var(--accent-blue); }
+.plan-status-archived { color: var(--text-dim); opacity: 0.5; }
 
 /* Status indicators */
 .status-dirty { color: var(--accent-yellow); }

@@ -9,7 +9,7 @@ module.exports = defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:8374',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -20,9 +20,9 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: 'cd .. && go run ./cmd/bearing daemon start --foreground --port 8080',
-    url: 'http://localhost:8080',
-    reuseExistingServer: !process.env.CI,
+    command: 'cd .. && go run ./cmd/bearing daemon start --foreground',
+    url: 'http://localhost:8374',
+    reuseExistingServer: true,
     timeout: 30000,
   },
 });

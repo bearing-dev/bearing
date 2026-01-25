@@ -17,6 +17,10 @@ const mockWorktrees = [
   { repo: 'surfdeeper', folder: 'surfdeeper', branch: 'main', base: true, dirty: false, unpushed: 0, prState: null },
 ];
 
+const mockPlans = [
+  { id: 'abc123', title: 'TUI improvements', project: 'bearing', status: 'active', issue: 42 },
+];
+
 test.describe('Navigation - Project Selection', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept API calls with mock data
@@ -25,6 +29,9 @@ test.describe('Navigation - Project Selection', () => {
     });
     await page.route('**/api/worktrees', route => {
       route.fulfill({ json: mockWorktrees });
+    });
+    await page.route('**/api/plans', route => {
+      route.fulfill({ json: mockPlans });
     });
     await page.route('**/api/events', route => {
       // SSE endpoint - just hang
@@ -82,6 +89,7 @@ test.describe('Navigation - Worktree Selection', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
@@ -116,7 +124,7 @@ test.describe('Navigation - Worktree Selection', () => {
     await expect(detailsContent).toContainText('Uncommitted');
   });
 
-  test('worktree index persists in localStorage', async ({ page }) => {
+  test('worktree folder persists in localStorage', async ({ page }) => {
     // Click third row
     await page.click('#worktree-rows .table-row:nth-child(3)');
 
@@ -124,7 +132,8 @@ test.describe('Navigation - Worktree Selection', () => {
       return JSON.parse(localStorage.getItem('bearing-state') || '{}');
     });
 
-    expect(savedState.worktreeIndex).toBe(2);
+    // The folder name is persisted (not the index) so selection survives sorting changes
+    expect(savedState.selectedWorktreeFolder).toBeTruthy();
   });
 });
 
@@ -132,53 +141,44 @@ test.describe('Navigation - Tab Views', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
   });
 
   test('clicking tab changes active view', async ({ page }) => {
-    // Click Issues tab
-    await page.click('.tab[data-view="issues"]');
+    // Click Planning tab
+    await page.click('.tab[data-view="planning"]');
 
     // Verify tab is active
-    await expect(page.locator('.tab[data-view="issues"]')).toHaveClass(/active/);
-    await expect(page.locator('.tab[data-view="worktrees"]')).not.toHaveClass(/active/);
+    await expect(page.locator('.tab[data-view="planning"]')).toHaveClass(/active/);
+    await expect(page.locator('.tab[data-view="operational"]')).not.toHaveClass(/active/);
 
-    // Main container should be hidden
-    await expect(page.locator('#main-container')).toHaveCSS('display', 'none');
+    // Worktrees panel should be hidden, plans panel visible
+    await expect(page.locator('#worktrees-panel')).toHaveClass(/hidden/);
+    await expect(page.locator('#plans-panel')).not.toHaveClass(/hidden/);
   });
 
-  test('clicking PRs tab shows placeholder', async ({ page }) => {
-    await page.click('.tab[data-view="prs"]');
+  test('switching back to operational shows worktrees', async ({ page }) => {
+    // Go to planning
+    await page.click('.tab[data-view="planning"]');
+    await expect(page.locator('#worktrees-panel')).toHaveClass(/hidden/);
 
-    // PRs tab should be active
-    await expect(page.locator('.tab[data-view="prs"]')).toHaveClass(/active/);
-
-    // Placeholder should be visible
-    const placeholder = page.locator('#placeholder-view');
-    await expect(placeholder).toBeVisible();
-    await expect(placeholder).toContainText('Pull Requests');
-  });
-
-  test('switching back to worktrees shows main content', async ({ page }) => {
-    // Go to issues
-    await page.click('.tab[data-view="issues"]');
-    await expect(page.locator('#main-container')).toHaveCSS('display', 'none');
-
-    // Go back to worktrees
-    await page.click('.tab[data-view="worktrees"]');
-    await expect(page.locator('#main-container')).toHaveCSS('display', 'flex');
+    // Go back to operational
+    await page.click('.tab[data-view="operational"]');
+    await expect(page.locator('#worktrees-panel')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#plans-panel')).toHaveClass(/hidden/);
   });
 
   test('current view persists in localStorage', async ({ page }) => {
-    await page.click('.tab[data-view="prs"]');
+    await page.click('.tab[data-view="planning"]');
 
     const savedState = await page.evaluate(() => {
       return JSON.parse(localStorage.getItem('bearing-state') || '{}');
     });
 
-    expect(savedState.currentView).toBe('prs');
+    expect(savedState.currentView).toBe('planning');
   });
 });
 
@@ -186,6 +186,7 @@ test.describe('Navigation - Persistence on Reload', () => {
   test('selected project survives page reload', async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
@@ -206,18 +207,19 @@ test.describe('Navigation - Persistence on Reload', () => {
   test('current view survives page reload', async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
 
-    // Switch to PRs view
-    await page.click('.tab[data-view="prs"]');
-    await expect(page.locator('.tab[data-view="prs"]')).toHaveClass(/active/);
+    // Switch to Planning view
+    await page.click('.tab[data-view="planning"]');
+    await expect(page.locator('.tab[data-view="planning"]')).toHaveClass(/active/);
 
     // Reload
     await page.reload();
 
-    // PRs should still be active
-    await expect(page.locator('.tab[data-view="prs"]')).toHaveClass(/active/);
+    // Planning should still be active
+    await expect(page.locator('.tab[data-view="planning"]')).toHaveClass(/active/);
   });
 });

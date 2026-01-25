@@ -4,7 +4,7 @@ const API_BASE = 'http://localhost:8374';
 
 // State
 const state = {
-  currentView: 'worktrees',
+  currentView: 'operational', // 'operational' (Worktrees+PRs) or 'planning' (Plans+Issues)
   projects: [],
   worktrees: [],
   plans: [],
@@ -12,6 +12,7 @@ const state = {
   selectedWorktree: null,
   selectedWorktreeFolder: null, // Persisted - the folder name survives reload
   selectedPlan: null,
+  selectedPlanPath: null, // Persisted - the plan ID survives reload
   focusedPanel: 'project-list',
   projectIndex: 0,
   worktreeIndex: 0,
@@ -19,6 +20,8 @@ const state = {
   evtSource: null,
   sortColumn: 'default',
   sortDirection: 'asc',
+  planSortColumn: 'default',
+  planSortDirection: 'asc',
 };
 
 // DOM elements
@@ -26,11 +29,12 @@ const els = {
   tabBar: null,
   projectList: null,
   worktreeRows: null,
+  plansRows: null,
   detailsContent: null,
   statusIndicator: null,
   helpModal: null,
-  plansModal: null,
-  plansList: null,
+  worktreesPanel: null,
+  plansPanel: null,
 };
 
 // Initialize
@@ -41,11 +45,12 @@ function init() {
   els.tabBar = document.querySelector('.tab-bar');
   els.projectList = document.getElementById('project-list');
   els.worktreeRows = document.getElementById('worktree-rows');
+  els.plansRows = document.getElementById('plans-rows');
   els.detailsContent = document.getElementById('details-content');
   els.statusIndicator = document.getElementById('status-indicator');
   els.helpModal = document.getElementById('help-modal');
-  els.plansModal = document.getElementById('plans-modal');
-  els.plansList = document.getElementById('plans-list');
+  els.worktreesPanel = document.getElementById('worktrees-panel');
+  els.plansPanel = document.getElementById('plans-panel');
 
   // Restore persisted state
   loadState();
@@ -56,10 +61,8 @@ function init() {
   setupTabHandlers();
   connectSSE();
 
-  // Restore view and sort indicators
-  if (state.currentView !== 'worktrees') {
-    switchView(state.currentView);
-  }
+  // Restore view and sort indicators - always call switchView to ensure proper state
+  switchView(state.currentView);
   updateSortIndicators();
 
   // Initial data load
@@ -71,12 +74,17 @@ function saveState() {
   // Store the actual worktree folder, not the index (index changes with sort order)
   const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
   const selectedWorktree = filtered[state.worktreeIndex];
+  const filteredPlans = state.plans.filter(p => p.project === state.selectedProject);
+  const selectedPlan = filteredPlans[state.planIndex];
 
   const persisted = {
     selectedProject: state.selectedProject,
     selectedWorktreeFolder: selectedWorktree?.folder || null,
+    selectedPlanPath: selectedPlan?.id || null,
     sortColumn: state.sortColumn,
     sortDirection: state.sortDirection,
+    planSortColumn: state.planSortColumn,
+    planSortDirection: state.planSortDirection,
     currentView: state.currentView,
   };
   localStorage.setItem('bearing-state', JSON.stringify(persisted));
@@ -89,9 +97,16 @@ function loadState() {
       const persisted = JSON.parse(saved);
       state.selectedProject = persisted.selectedProject || null;
       state.selectedWorktreeFolder = persisted.selectedWorktreeFolder || null;
+      state.selectedPlanPath = persisted.selectedPlanPath || null;
       state.sortColumn = persisted.sortColumn || 'default';
       state.sortDirection = persisted.sortDirection || 'asc';
-      state.currentView = persisted.currentView || 'worktrees';
+      state.planSortColumn = persisted.planSortColumn || 'default';
+      state.planSortDirection = persisted.planSortDirection || 'asc';
+      // Migrate old view names to new ones
+      let view = persisted.currentView || 'operational';
+      if (view === 'worktrees') view = 'operational';
+      if (view === 'issues' || view === 'prs') view = 'planning';
+      state.currentView = view;
     }
   } catch (e) {
     console.warn('Failed to load persisted state:', e);
@@ -107,13 +122,15 @@ async function fetchJSON(url) {
 
 async function refresh() {
   try {
-    const [projects, worktrees] = await Promise.all([
+    const [projects, worktrees, plans] = await Promise.all([
       fetchJSON('/api/projects'),
       fetchJSON('/api/worktrees'),
+      fetchJSON('/api/plans'),
     ]);
 
     state.projects = projects || [];
     state.worktrees = worktrees || [];
+    state.plans = plans || [];
 
     renderProjects();
 
@@ -137,13 +154,51 @@ async function refresh() {
   }
 }
 
-async function loadPlans() {
-  try {
-    state.plans = await fetchJSON('/api/plans') || [];
-    renderPlans();
-  } catch (err) {
-    console.error('Failed to load plans:', err);
+function sortPlans(plans) {
+  const sorted = [...plans];
+  const dir = state.planSortDirection === 'asc' ? 1 : -1;
+
+  if (state.planSortColumn === 'default') {
+    // Default: status priority (draft/active first), then title
+    const statusOrder = { draft: 0, active: 0, done: 1, archived: 2 };
+    sorted.sort((a, b) => {
+      const aStatus = statusOrder[a.status] ?? 3;
+      const bStatus = statusOrder[b.status] ?? 3;
+      if (aStatus !== bStatus) return (aStatus - bStatus) * dir;
+      return a.title.localeCompare(b.title) * dir;
+    });
+  } else if (state.planSortColumn === 'title') {
+    sorted.sort((a, b) => a.title.localeCompare(b.title) * dir);
+  } else if (state.planSortColumn === 'project') {
+    sorted.sort((a, b) => a.project.localeCompare(b.project) * dir);
+  } else if (state.planSortColumn === 'status') {
+    sorted.sort((a, b) => (a.status || '').localeCompare(b.status || '') * dir);
+  } else if (state.planSortColumn === 'issue') {
+    sorted.sort((a, b) => (a.issue || 0) - (b.issue || 0) * dir);
   }
+
+  return sorted;
+}
+
+function handlePlanSort(column) {
+  if (state.planSortColumn === column) {
+    state.planSortDirection = state.planSortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.planSortColumn = column;
+    state.planSortDirection = 'asc';
+  }
+  updatePlanSortIndicators();
+  renderPlansTable();
+  saveState();
+}
+
+function updatePlanSortIndicators() {
+  document.querySelectorAll('#plans-table .table-header [data-sort]').forEach(el => {
+    el.classList.remove('sort-asc', 'sort-desc');
+    if (el.dataset.sort === state.planSortColumn) {
+      el.classList.add(state.planSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
 }
 
 // Rendering
@@ -207,12 +262,13 @@ function handleSort(column) {
 }
 
 function updateSortIndicators() {
-  document.querySelectorAll('.table-header [data-sort]').forEach(el => {
+  document.querySelectorAll('#worktree-table .table-header [data-sort]').forEach(el => {
     el.classList.remove('sort-asc', 'sort-desc');
     if (el.dataset.sort === state.sortColumn) {
       el.classList.add(state.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
     }
   });
+  updatePlanSortIndicators();
 }
 
 function renderWorktrees() {
@@ -263,14 +319,69 @@ function renderWorktrees() {
   }
 }
 
-function renderPlans() {
-  els.plansList.innerHTML = state.plans.map((p, i) => `
-    <div class="list-item ${i === state.planIndex ? 'selected' : ''}"
-         data-index="${i}" data-issue="${p.issue || ''}">
-      <span class="plan-status ${p.status}"></span>
-      <span class="plan-title">${escapeHtml(p.title)}</span>
-      <span class="plan-project">${escapeHtml(p.project)}</span>
-      <span class="plan-issue">${p.issue ? '#' + p.issue : ''}</span>
+function renderPlansTable() {
+  const filtered = sortPlans(state.plans.filter(p => p.project === state.selectedProject));
+
+  // Restore selection from persisted plan ID
+  if (state.selectedPlanPath) {
+    const idx = filtered.findIndex(p => p.path === state.selectedPlanPath);
+    if (idx >= 0) {
+      state.planIndex = idx;
+    } else {
+      state.planIndex = 0;
+      state.selectedPlanPath = filtered[0]?.id || null;
+    }
+  }
+
+  els.plansRows.innerHTML = filtered.map((p, i) => {
+    const statusClass = `plan-status-${p.status || 'draft'}`;
+    const issueLink = p.issue ? `#${p.issue}` : '';
+
+    return `
+      <div class="table-row ${i === state.planIndex ? 'selected' : ''}"
+           data-plan-id="${p.path}" data-index="${i}">
+        <span class="col-title">${escapeHtml(p.title)}</span>
+        <span class="col-project">${escapeHtml(p.project)}</span>
+        <span class="col-plan-status"><span class="${statusClass}">${p.status || 'draft'}</span></span>
+        <span class="col-issue">${issueLink}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Update details if we have a selection
+  if (filtered.length > 0 && state.planIndex < filtered.length) {
+    updatePlanDetails(filtered[state.planIndex]);
+  } else if (state.currentView === 'planning') {
+    clearDetails();
+  }
+}
+
+function updatePlanDetails(plan) {
+  if (!plan) {
+    clearDetails();
+    return;
+  }
+
+  state.selectedPlan = plan;
+
+  const rows = [
+    { label: 'Title:', value: plan.title },
+    { label: 'Project:', value: plan.project },
+    { label: 'Status:', value: plan.status || 'draft' },
+    { label: 'Path:', value: plan.path },
+  ];
+
+  if (plan.issue) {
+    rows.push({ label: 'Issue:', value: `#${plan.issue}` });
+  }
+  if (plan.priority) {
+    rows.push({ label: 'Priority:', value: plan.priority });
+  }
+
+  els.detailsContent.innerHTML = rows.map(r => `
+    <div class="detail-row">
+      <span class="detail-label">${r.label}</span>
+      <span class="detail-value">${escapeHtml(r.value)}</span>
     </div>
   `).join('');
 }
@@ -322,6 +433,7 @@ function clearDetails() {
 function selectProject(name) {
   state.selectedProject = name;
   state.worktreeIndex = 0;
+  state.planIndex = 0;
 
   // Update project list selection
   els.projectList.querySelectorAll('.list-item').forEach((el, i) => {
@@ -330,6 +442,7 @@ function selectProject(name) {
   });
 
   renderWorktrees();
+  renderPlansTable();
   saveState();
 }
 
@@ -348,6 +461,21 @@ function selectWorktree(index) {
   saveState();
 }
 
+function selectPlan(index) {
+  const filtered = sortPlans(state.plans.filter(p => p.project === state.selectedProject));
+  if (index < 0 || index >= filtered.length) return;
+
+  state.planIndex = index;
+  state.selectedPlanPath = filtered[index].id;
+
+  els.plansRows.querySelectorAll('.table-row').forEach((el, i) => {
+    el.classList.toggle('selected', i === index);
+  });
+
+  updatePlanDetails(filtered[index]);
+  saveState();
+}
+
 // Keyboard navigation
 function setupKeyboardNavigation() {
   document.addEventListener('keydown', (e) => {
@@ -360,10 +488,6 @@ function setupKeyboardNavigation() {
       return;
     }
 
-    if (!els.plansModal.classList.contains('hidden')) {
-      handlePlansKeys(e);
-      return;
-    }
 
     // Global keys
     switch (e.key) {
@@ -371,28 +495,20 @@ function setupKeyboardNavigation() {
         openHelp();
         e.preventDefault();
         break;
-      case 'p':
-        openPlans();
-        e.preventDefault();
-        break;
       case 'r':
         refresh();
         e.preventDefault();
         break;
       case 'o':
-        openPR();
+        openLink();
         e.preventDefault();
         break;
       case '1':
-        switchView('worktrees');
+        switchView('operational');
         e.preventDefault();
         break;
       case '2':
-        switchView('issues');
-        e.preventDefault();
-        break;
-      case '3':
-        switchView('prs');
+        switchView('planning');
         e.preventDefault();
         break;
       case 'h':
@@ -403,7 +519,7 @@ function setupKeyboardNavigation() {
       case 'l':
       case 'ArrowRight':
         if (state.focusedPanel === 'project-list') {
-          focusPanel('worktree-table');
+          focusPanel(state.currentView === 'operational' ? 'worktree-table' : 'plans-table');
         }
         e.preventDefault();
         break;
@@ -429,35 +545,6 @@ function setupKeyboardNavigation() {
   });
 }
 
-function handlePlansKeys(e) {
-  switch (e.key) {
-    case 'Escape':
-    case 'p':
-      closePlans();
-      e.preventDefault();
-      break;
-    case 'j':
-    case 'ArrowDown':
-      if (state.planIndex < state.plans.length - 1) {
-        state.planIndex++;
-        renderPlans();
-      }
-      e.preventDefault();
-      break;
-    case 'k':
-    case 'ArrowUp':
-      if (state.planIndex > 0) {
-        state.planIndex--;
-        renderPlans();
-      }
-      e.preventDefault();
-      break;
-    case 'o':
-      openIssue();
-      e.preventDefault();
-      break;
-  }
-}
 
 function focusPanel(panelId) {
   state.focusedPanel = panelId;
@@ -465,15 +552,21 @@ function focusPanel(panelId) {
 }
 
 function focusNextPanel() {
-  const panels = ['project-list', 'worktree-table', 'details-panel'];
-  const idx = panels.indexOf(state.focusedPanel);
+  const tableId = state.currentView === 'operational' ? 'worktree-table' : 'plans-table';
+  const panels = ['project-list', tableId, 'details-panel'];
+  const currentPanel = state.focusedPanel === 'worktree-table' || state.focusedPanel === 'plans-table'
+    ? tableId : state.focusedPanel;
+  const idx = panels.indexOf(currentPanel);
   const next = panels[(idx + 1) % panels.length];
   focusPanel(next);
 }
 
 function focusPrevPanel() {
-  const panels = ['project-list', 'worktree-table', 'details-panel'];
-  const idx = panels.indexOf(state.focusedPanel);
+  const tableId = state.currentView === 'operational' ? 'worktree-table' : 'plans-table';
+  const panels = ['project-list', tableId, 'details-panel'];
+  const currentPanel = state.focusedPanel === 'worktree-table' || state.focusedPanel === 'plans-table'
+    ? tableId : state.focusedPanel;
+  const idx = panels.indexOf(currentPanel);
   const prev = panels[(idx - 1 + panels.length) % panels.length];
   focusPanel(prev);
 }
@@ -484,10 +577,17 @@ function navigateDown() {
       state.projectIndex++;
       selectProject(state.projects[state.projectIndex].name);
     }
-  } else if (state.focusedPanel === 'worktree-table') {
-    const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
-    if (state.worktreeIndex < filtered.length - 1) {
-      selectWorktree(state.worktreeIndex + 1);
+  } else if (state.focusedPanel === 'worktree-table' || state.focusedPanel === 'plans-table') {
+    if (state.currentView === 'operational') {
+      const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
+      if (state.worktreeIndex < filtered.length - 1) {
+        selectWorktree(state.worktreeIndex + 1);
+      }
+    } else {
+      const filtered = state.plans.filter(p => p.project === state.selectedProject);
+      if (state.planIndex < filtered.length - 1) {
+        selectPlan(state.planIndex + 1);
+      }
     }
   }
 }
@@ -498,9 +598,15 @@ function navigateUp() {
       state.projectIndex--;
       selectProject(state.projects[state.projectIndex].name);
     }
-  } else if (state.focusedPanel === 'worktree-table') {
-    if (state.worktreeIndex > 0) {
-      selectWorktree(state.worktreeIndex - 1);
+  } else if (state.focusedPanel === 'worktree-table' || state.focusedPanel === 'plans-table') {
+    if (state.currentView === 'operational') {
+      if (state.worktreeIndex > 0) {
+        selectWorktree(state.worktreeIndex - 1);
+      }
+    } else {
+      if (state.planIndex > 0) {
+        selectPlan(state.planIndex - 1);
+      }
     }
   }
 }
@@ -514,9 +620,14 @@ function handleEnter() {
 
 // Click handlers
 function setupClickHandlers() {
-  // Sort header clicks
-  document.querySelectorAll('.table-header [data-sort]').forEach(el => {
+  // Sort header clicks for worktrees table
+  document.querySelectorAll('#worktree-table .table-header [data-sort]').forEach(el => {
     el.addEventListener('click', () => handleSort(el.dataset.sort));
+  });
+
+  // Sort header clicks for plans table
+  document.querySelectorAll('#plans-table .table-header [data-sort]').forEach(el => {
+    el.addEventListener('click', () => handlePlanSort(el.dataset.sort));
   });
 
   els.projectList.addEventListener('click', (e) => {
@@ -535,21 +646,17 @@ function setupClickHandlers() {
     }
   });
 
-  els.plansList.addEventListener('click', (e) => {
-    const item = e.target.closest('.list-item');
-    if (item) {
-      state.planIndex = parseInt(item.dataset.index);
-      renderPlans();
+  els.plansRows.addEventListener('click', (e) => {
+    const row = e.target.closest('.table-row');
+    if (row) {
+      selectPlan(parseInt(row.dataset.index));
+      focusPanel('plans-table');
     }
   });
 
   // Modal backdrop clicks
   els.helpModal.addEventListener('click', (e) => {
     if (e.target === els.helpModal) closeHelp();
-  });
-
-  els.plansModal.addEventListener('click', (e) => {
-    if (e.target === els.plansModal) closePlans();
   });
 }
 
@@ -562,41 +669,26 @@ function closeHelp() {
   els.helpModal.classList.add('hidden');
 }
 
-function openPlans() {
-  loadPlans().then(() => {
-    els.plansModal.classList.remove('hidden');
-    els.plansList.focus();
-  });
-}
-
-function closePlans() {
-  els.plansModal.classList.add('hidden');
-}
-
 // Actions
-function openPR() {
-  if (!state.selectedWorktree || !state.selectedWorktree.prState) {
-    showNotification('No PR for this worktree');
-    return;
+function openLink() {
+  if (state.currentView === 'operational') {
+    // Open PR for selected worktree
+    if (!state.selectedWorktree || !state.selectedWorktree.prState) {
+      showNotification('No PR for this worktree');
+      return;
+    }
+    const { repo, branch } = state.selectedWorktree;
+    const url = `https://github.com/joshribakoff/${repo}/pulls?q=head:${encodeURIComponent(branch)}`;
+    window.open(url, '_blank');
+  } else {
+    // Open issue for selected plan
+    if (!state.selectedPlan || !state.selectedPlan.issue) {
+      showNotification('No issue for this plan');
+      return;
+    }
+    const url = `https://github.com/joshribakoff/${state.selectedPlan.project}/issues/${state.selectedPlan.issue}`;
+    window.open(url, '_blank');
   }
-
-  // Construct GitHub PR URL (assumes joshribakoff org)
-  const { repo, branch } = state.selectedWorktree;
-  const url = `https://github.com/joshribakoff/${repo}/pulls?q=head:${encodeURIComponent(branch)}`;
-  window.open(url, '_blank');
-}
-
-function openIssue() {
-  if (state.planIndex >= state.plans.length) return;
-
-  const plan = state.plans[state.planIndex];
-  if (!plan.issue) {
-    showNotification('No issue for this plan');
-    return;
-  }
-
-  const url = `https://github.com/joshribakoff/${plan.project}/issues/${plan.issue}`;
-  window.open(url, '_blank');
 }
 
 // Server-Sent Events
@@ -677,49 +769,35 @@ function switchView(view) {
     tab.classList.toggle('active', tab.dataset.view === view);
   });
 
-  // Show/hide view content
-  const mainContainer = document.getElementById('main-container');
-  const detailsSection = document.getElementById('details-section');
-
-  if (view === 'worktrees') {
-    mainContainer.style.display = 'flex';
-    detailsSection.style.display = 'block';
+  // Show/hide view panels
+  if (view === 'operational') {
+    els.worktreesPanel.classList.remove('hidden');
+    els.plansPanel.classList.add('hidden');
+    // Update details for selected worktree
+    const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
+    if (filtered.length > 0 && state.worktreeIndex < filtered.length) {
+      updateDetails(filtered[state.worktreeIndex]);
+    } else {
+      clearDetails();
+    }
   } else {
-    mainContainer.style.display = 'none';
-    detailsSection.style.display = 'none';
-    showPlaceholder(view);
+    els.worktreesPanel.classList.add('hidden');
+    els.plansPanel.classList.remove('hidden');
+    // Update details for selected plan
+    const filtered = state.plans.filter(p => p.project === state.selectedProject);
+    if (filtered.length > 0 && state.planIndex < filtered.length) {
+      updatePlanDetails(filtered[state.planIndex]);
+    } else {
+      clearDetails();
+    }
   }
+
+  saveState();
 }
 
 function cycleViews() {
-  const views = ['worktrees', 'issues', 'prs'];
+  const views = ['operational', 'planning'];
   const idx = views.indexOf(state.currentView);
   const next = views[(idx + 1) % views.length];
   switchView(next);
 }
-
-function showPlaceholder(view) {
-  const titles = { issues: 'Issues', prs: 'Pull Requests' };
-  let placeholder = document.getElementById('placeholder-view');
-
-  if (!placeholder) {
-    placeholder = document.createElement('div');
-    placeholder.id = 'placeholder-view';
-    placeholder.className = 'placeholder-view';
-    document.body.insertBefore(placeholder, document.getElementById('footer-bar'));
-  }
-
-  placeholder.textContent = `${titles[view]} - Coming soon`;
-  placeholder.style.display = 'flex';
-}
-
-// Hide placeholder when switching back to worktrees
-const originalSwitchView = switchView;
-switchView = function(view) {
-  const placeholder = document.getElementById('placeholder-view');
-  if (placeholder) {
-    placeholder.style.display = 'none';
-  }
-  originalSwitchView(view);
-  saveState();
-};
