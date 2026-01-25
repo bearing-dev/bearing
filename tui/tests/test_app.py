@@ -341,6 +341,45 @@ async def test_view_switching_to_worktrees(workspace):
 
 
 @pytest.mark.asyncio
+async def test_view_switch_preserves_project_selection(workspace):
+    """Test that project selection persists when switching between views."""
+    from bearing_tui.app import ViewMode
+
+    # Create plans directory
+    plans_dir = workspace / "plans" / "myapp"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "001-test-plan.md").write_text("# Test\n")
+
+    app = BearingApp(workspace=workspace)
+    async with app.run_test() as pilot:
+        # Select a project
+        project_list = app.query_one(ProjectList)
+        await pilot.press("j")  # Move to first project
+        await pilot.press("enter")
+        await pilot.pause()
+
+        # Verify project is selected
+        assert app._current_project is not None
+        selected_project = app._current_project
+
+        # Switch to plans view
+        await pilot.press("p")
+        await pilot.pause()
+
+        # Project selection should persist
+        assert app._current_project == selected_project
+        assert app._view_mode == ViewMode.PLANS
+
+        # Switch back to worktrees
+        await pilot.press("w")
+        await pilot.pause()
+
+        # Project selection should still persist
+        assert app._current_project == selected_project
+        assert app._view_mode == ViewMode.WORKTREES
+
+
+@pytest.mark.asyncio
 async def test_footer_shows_current_mode(workspace):
     """Test that footer highlights current mode."""
     from bearing_tui.app import ViewMode

@@ -331,19 +331,19 @@ class BearingApp(App):
         """Switch to worktrees view."""
         if self._view_mode != ViewMode.WORKTREES:
             self._view_mode = ViewMode.WORKTREES
-            self._current_project = None
             self._update_view()
-            self.query_one(WorktreeTable).clear_worktrees()
-            self.query_one(DetailsPanel).clear()
+            # If project selected, load its worktrees
+            if self._current_project:
+                self._update_worktree_table(self._current_project)
 
     def action_switch_to_plans(self) -> None:
         """Switch to plans view."""
         if self._view_mode != ViewMode.PLANS:
             self._view_mode = ViewMode.PLANS
-            self._current_project = None
             self._update_view()
-            self.query_one(PlansTable).clear_plans()
-            self.query_one(DetailsPanel).clear()
+            # If project selected, load its plans
+            if self._current_project:
+                self._update_plans_table(self._current_project)
 
     @property
     def _session_file(self) -> Path:
