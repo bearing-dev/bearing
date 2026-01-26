@@ -28,13 +28,6 @@
   border-bottom-color: var(--accent-yellow);
 }
 
-.numKey {
-  color: var(--accent-blue);
-  font-size: 10px;
-  margin-right: 4px;
-  vertical-align: super;
-}
-
 .letterKey {
   text-decoration: underline;
   text-underline-offset: 2px;

@@ -21,16 +21,6 @@ describe('App keyboard navigation', () => {
     expect(document.body).toBeInTheDocument();
   });
 
-  it('1 key triggers view change event', () => {
-    render(() => <App />);
-
-    const event = new KeyboardEvent('keydown', { key: '1' });
-    document.dispatchEvent(event);
-
-    // Check that the view state updated
-    expect(state.currentView).toBe('operational');
-  });
-
   it('w key triggers view change to operational', () => {
     render(() => <App />);
 
@@ -40,15 +30,6 @@ describe('App keyboard navigation', () => {
     expect(state.currentView).toBe('operational');
   });
 
-  it('2 key triggers view change to planning', () => {
-    render(() => <App />);
-
-    const event = new KeyboardEvent('keydown', { key: '2' });
-    document.dispatchEvent(event);
-
-    expect(state.currentView).toBe('planning');
-  });
-
   it('p key triggers view change to planning', () => {
     render(() => <App />);
 
@@ -56,5 +37,26 @@ describe('App keyboard navigation', () => {
     document.dispatchEvent(event);
 
     expect(state.currentView).toBe('planning');
+  });
+
+  it('0 key sets focused panel to project-list', () => {
+    render(() => <App />);
+
+    const event = new KeyboardEvent('keydown', { key: '0' });
+    document.dispatchEvent(event);
+
+    expect(state.focusedPanel).toBe('project-list');
+  });
+
+  it('1 key sets focused panel to main table', () => {
+    render(() => <App />);
+
+    // First ensure we're on operational view
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' }));
+
+    const event = new KeyboardEvent('keydown', { key: '1' });
+    document.dispatchEvent(event);
+
+    expect(state.focusedPanel).toBe('worktree-table');
   });
 });

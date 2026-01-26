@@ -25,17 +25,24 @@ function App() {
       }
 
       switch (e.key) {
-        case '1':
         case 'w':
           setView('operational');
           break;
-        case '2':
         case 'p':
           setView('planning');
           break;
         case '0':
           setFocusedPanel('project-list');
           document.querySelector<HTMLElement>('[data-panel="project-list"]')?.focus();
+          break;
+        case '1':
+          const mainPanel = state.currentView === 'operational' ? 'worktree-table' : 'plans-table';
+          setFocusedPanel(mainPanel);
+          document.querySelector<HTMLElement>(`[data-panel="${mainPanel}"]`)?.focus();
+          break;
+        case '2':
+          setFocusedPanel('details');
+          document.querySelector<HTMLElement>('[data-panel="details"]')?.focus();
           break;
         case 'j':
         case 'ArrowDown':

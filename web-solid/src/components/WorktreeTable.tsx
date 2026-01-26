@@ -68,7 +68,7 @@ export function WorktreeTable() {
   return (
     <section class={styles.panel}>
       <div class={styles.header}>[1] Worktrees + PRs</div>
-      <div class={styles.table} tabIndex={0}>
+      <div class={styles.table} tabIndex={0} data-panel="worktree-table">
         <div class={styles.tableHeader}>
           <span class={`${styles.colFolder} ${getSortClass('folder')}`} onClick={() => handleSort('folder')}>Folder</span>
           <span class={`${styles.colBranch} ${getSortClass('branch')}`} onClick={() => handleSort('branch')}>Branch</span>

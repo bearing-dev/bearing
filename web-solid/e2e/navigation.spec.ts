@@ -40,4 +40,15 @@ test.describe('Navigation', () => {
     await page.keyboard.press('h');
     // Focus should be back on project list
   });
+
+  test('clicking a project auto-focuses main table', async ({ page }) => {
+    await page.waitForSelector('li[class*="item"]');
+    await page.locator('li[class*="item"]').first().click();
+
+    // Wait for focus to shift
+    await page.waitForTimeout(100);
+
+    const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-panel'));
+    expect(focused).toBe('worktree-table');
+  });
 });

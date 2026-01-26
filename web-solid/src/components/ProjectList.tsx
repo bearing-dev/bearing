@@ -5,7 +5,12 @@ import styles from './ProjectList.module.css';
 export function ProjectList() {
   const handleClick = (name: string) => {
     selectProject(name);
-    setFocusedPanel('project-list');
+    // Auto-focus main table after selecting project
+    const mainPanel = state.currentView === 'operational' ? 'worktree-table' : 'plans-table';
+    setFocusedPanel(mainPanel);
+    setTimeout(() => {
+      document.querySelector<HTMLElement>(`[data-panel="${mainPanel}"]`)?.focus();
+    }, 0);
   };
 
   return (

@@ -66,12 +66,12 @@ test.describe('Layout', () => {
     // Start on operational view
     await expect(page.locator('text=[1] Worktrees + PRs')).toBeVisible();
 
-    // Switch to planning
-    await page.keyboard.press('2');
+    // Switch to planning with 'p' key
+    await page.keyboard.press('p');
     await expect(page.locator('text=[1] Plans + Issues')).toBeVisible();
 
-    // Switch back
-    await page.keyboard.press('1');
+    // Switch back with 'w' key
+    await page.keyboard.press('w');
     await expect(page.locator('text=[1] Worktrees + PRs')).toBeVisible();
   });
 });

@@ -55,7 +55,7 @@ export function DetailsPanel() {
   return (
     <section class={styles.section}>
       <div class={styles.header}>[2] Details</div>
-      <div class={styles.panel} tabIndex={0}>
+      <div class={styles.panel} tabIndex={0} data-panel="details">
         <Show when={details()} fallback={
           <span class={styles.empty}>Select an item to view details</span>
         }>

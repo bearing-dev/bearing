@@ -58,7 +58,7 @@ export function PlansTable() {
   return (
     <section class={styles.panel}>
       <div class={styles.header}>[1] Plans + Issues</div>
-      <div class={styles.table} tabIndex={0}>
+      <div class={styles.table} tabIndex={0} data-panel="plans-table">
         <div class={styles.tableHeader}>
           <span class={`${styles.colTitle} ${getSortClass('title')}`} onClick={() => handleSort('title')}>Title</span>
           <span class={`${styles.colProject} ${getSortClass('project')}`} onClick={() => handleSort('project')}>Project</span>

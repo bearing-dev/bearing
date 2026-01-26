@@ -8,10 +8,11 @@ interface HelpModalProps {
 
 export function HelpModal(props: HelpModalProps) {
   const shortcuts = [
-    { key: '1 / w', desc: 'Worktrees + PRs view' },
-    { key: '2 / p', desc: 'Plans + Issues view' },
-    { key: 'j/k', desc: 'Navigate up/down' },
-    { key: 'Enter', desc: 'Select item' },
+    { key: '0/1/2', desc: 'Focus panel (Projects/Main/Details)' },
+    { key: 'w', desc: 'Worktrees + PRs view' },
+    { key: 'p', desc: 'Plans + Issues view' },
+    { key: 'j/k ↑/↓', desc: 'Navigate up/down' },
+    { key: 'h/l ←/→', desc: 'Navigate left/right' },
     { key: 'r', desc: 'Refresh data' },
     { key: '?', desc: 'Toggle help' },
     { key: 'Esc', desc: 'Close modal' },
