@@ -1,0 +1,119 @@
+.panel {
+  flex: 1;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel:focus-within {
+  border-color: var(--border-focus);
+}
+
+.header {
+  background: var(--bg-surface);
+  color: var(--accent-yellow);
+  font-weight: bold;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  outline: none;
+}
+
+.tableHeader {
+  display: flex;
+  background: var(--bg-surface);
+  color: var(--accent-blue);
+  font-weight: bold;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable:hover {
+  color: var(--text-bright);
+}
+
+.sortable::after {
+  content: '⇅';
+  margin-left: 4px;
+  opacity: 0.3;
+  font-size: 10px;
+}
+
+.sortable:hover::after {
+  opacity: 0.6;
+}
+
+.sortAsc::after {
+  content: '▲';
+  opacity: 1;
+  color: var(--accent-cyan);
+}
+
+.sortDesc::after {
+  content: '▼';
+  opacity: 1;
+  color: var(--accent-cyan);
+}
+
+.tableBody {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.tableRow {
+  display: flex;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.tableRow:nth-child(odd) {
+  background: var(--bg-surface);
+}
+
+.tableRow:nth-child(even) {
+  background: var(--bg-panel);
+}
+
+.tableRow:hover {
+  background: var(--bg-highlight);
+}
+
+.tableRow.selected {
+  background: var(--bg-selection);
+  color: var(--text-bright);
+}
+
+.table:focus .tableRow.selected {
+  background: var(--bg-selection-focus);
+  font-weight: bold;
+}
+
+.colFolder { flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.colBranch { flex: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.colStatus { flex: 1; text-align: center; }
+.colPr { flex: 0.8; text-align: center; }
+
+.statusDirty { color: var(--accent-yellow); }
+.statusClean { color: var(--accent-green); }
+.statusUnpushed { color: var(--accent-orange); }
+
+.propen { color: var(--accent-green); }
+.prmerged { color: var(--accent-purple); }
+.prdraft { color: var(--text-dim); }
+.prclosed { color: var(--accent-red); }
+
+.baseIndicator { color: var(--accent-blue); font-size: 10px; margin-left: 4px; }

@@ -1,0 +1,37 @@
+.footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 12px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.status {
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.statusOk {
+  color: var(--accent-green);
+}
+
+.statusError {
+  color: var(--accent-red);
+}
+
+.statusConnecting {
+  color: var(--accent-yellow);
+}
+
+.help {
+  color: var(--text-dim);
+}
+
+.help kbd {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: inherit;
+}

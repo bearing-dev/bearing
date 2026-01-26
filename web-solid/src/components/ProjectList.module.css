@@ -1,0 +1,59 @@
+.panel {
+  width: 220px;
+  min-width: 180px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel:focus-within {
+  border-color: var(--border-focus);
+}
+
+.header {
+  background: var(--bg-surface);
+  color: var(--accent-yellow);
+  font-weight: bold;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+  outline: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  padding: 4px 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item:hover {
+  background: var(--bg-highlight);
+}
+
+.item.selected {
+  background: var(--bg-selection);
+  color: var(--text-bright);
+}
+
+.list:focus .item.selected {
+  background: var(--bg-selection-focus);
+  font-weight: bold;
+}
+
+.count {
+  color: var(--text-dim);
+  font-size: 11px;
+}

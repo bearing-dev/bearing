@@ -1,0 +1,65 @@
+:root {
+  /* Darcula theme */
+  --bg-base: #1e1e1e;
+  --bg-panel: #2d2d2d;
+  --bg-surface: #3c3c3c;
+  --bg-highlight: #4a4a4a;
+  --bg-selection: #214283;
+  --bg-selection-focus: #2d5ca8;
+
+  --text: #a9b7c6;
+  --text-bright: #ffffff;
+  --text-dim: #6a8759;
+
+  --border: #555555;
+  --border-focus: #6897bb;
+
+  --accent-yellow: #ffc66d;
+  --accent-green: #6a8759;
+  --accent-blue: #6897bb;
+  --accent-cyan: #299999;
+  --accent-purple: #9876aa;
+  --accent-orange: #cc7832;
+  --accent-red: #ff6b68;
+
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  background-color: var(--bg-base);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
