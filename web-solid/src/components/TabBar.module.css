@@ -28,7 +28,18 @@
   border-bottom-color: var(--accent-yellow);
 }
 
-.shortcut {
+.numKey {
   color: var(--accent-blue);
-  font-size: 11px;
+  font-size: 10px;
+  margin-right: 4px;
+  vertical-align: super;
+}
+
+.letterKey {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tab.active .letterKey {
+  color: var(--accent-yellow);
 }

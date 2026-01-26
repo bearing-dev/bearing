@@ -8,8 +8,8 @@ interface HelpModalProps {
 
 export function HelpModal(props: HelpModalProps) {
   const shortcuts = [
-    { key: '1', desc: 'Worktrees + PRs view' },
-    { key: '2', desc: 'Plans + Issues view' },
+    { key: '1 / w', desc: 'Worktrees + PRs view' },
+    { key: '2 / p', desc: 'Plans + Issues view' },
     { key: 'j/k', desc: 'Navigate up/down' },
     { key: 'Enter', desc: 'Select item' },
     { key: 'r', desc: 'Refresh data' },

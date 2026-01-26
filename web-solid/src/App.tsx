@@ -1,5 +1,5 @@
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
-import { state, setView } from './stores/state';
+import { state, setView, setFocusedPanel } from './stores/state';
 import { refresh, connectSSE, disconnectSSE } from './api/client';
 import { TabBar } from './components/TabBar';
 import { ProjectList } from './components/ProjectList';
@@ -26,10 +26,16 @@ function App() {
 
       switch (e.key) {
         case '1':
+        case 'w':
           setView('operational');
           break;
         case '2':
+        case 'p':
           setView('planning');
+          break;
+        case '0':
+          setFocusedPanel('project-list');
+          document.querySelector<HTMLElement>('[data-panel="project-list"]')?.focus();
           break;
         case 'r':
           refresh();
