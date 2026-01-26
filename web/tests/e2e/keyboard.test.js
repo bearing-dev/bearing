@@ -16,14 +16,16 @@ const mockWorktrees = [
 ];
 
 const mockPlans = [
-  { title: 'TUI improvements', project: 'bearing', status: 'in_progress', issue: 42 },
-  { title: 'Add compass component', project: 'sailkit', status: 'pending', issue: 15 },
+  { id: 'abc123', title: 'TUI improvements', project: 'bearing', status: 'active', issue: 42 },
+  { id: 'ghi789', title: 'Web dashboard', project: 'bearing', status: 'draft', issue: 66 },
+  { id: 'def456', title: 'Add compass component', project: 'sailkit', status: 'draft', issue: 15 },
 ];
 
 test.describe('Keyboard - j/k Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
@@ -109,6 +111,7 @@ test.describe('Keyboard - h/l Panel Focus', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
@@ -158,44 +161,40 @@ test.describe('Keyboard - Number Keys for Views', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
   });
 
-  test('1 key switches to worktrees view', async ({ page }) => {
+  test('1 key switches to operational view (Worktrees+PRs)', async ({ page }) => {
     // First switch away
     await page.keyboard.press('2');
-    await expect(page.locator('.tab[data-view="issues"]')).toHaveClass(/active/);
+    await expect(page.locator('.tab[data-view="planning"]')).toHaveClass(/active/);
 
     // Press 1 to go back
     await page.keyboard.press('1');
-    await expect(page.locator('.tab[data-view="worktrees"]')).toHaveClass(/active/);
-    await expect(page.locator('#main-container')).toHaveCSS('display', 'flex');
+    await expect(page.locator('.tab[data-view="operational"]')).toHaveClass(/active/);
+    await expect(page.locator('#worktrees-panel')).not.toHaveClass(/hidden/);
+    await expect(page.locator('#plans-panel')).toHaveClass(/hidden/);
   });
 
-  test('2 key switches to issues view', async ({ page }) => {
+  test('2 key switches to planning view (Plans+Issues)', async ({ page }) => {
     await page.keyboard.press('2');
 
-    await expect(page.locator('.tab[data-view="issues"]')).toHaveClass(/active/);
-    await expect(page.locator('#main-container')).toHaveCSS('display', 'none');
-  });
-
-  test('3 key switches to PRs view', async ({ page }) => {
-    await page.keyboard.press('3');
-
-    await expect(page.locator('.tab[data-view="prs"]')).toHaveClass(/active/);
-    await expect(page.locator('#placeholder-view')).toContainText('Pull Requests');
+    await expect(page.locator('.tab[data-view="planning"]')).toHaveClass(/active/);
+    await expect(page.locator('#worktrees-panel')).toHaveClass(/hidden/);
+    await expect(page.locator('#plans-panel')).not.toHaveClass(/hidden/);
   });
 
   test('number keys update localStorage', async ({ page }) => {
-    await page.keyboard.press('3');
+    await page.keyboard.press('2');
 
     const savedState = await page.evaluate(() => {
       return JSON.parse(localStorage.getItem('bearing-state') || '{}');
     });
 
-    expect(savedState.currentView).toBe('prs');
+    expect(savedState.currentView).toBe('planning');
   });
 });
 
@@ -203,26 +202,23 @@ test.describe('Keyboard - Tab Cycling', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
   });
 
   test('Tab key cycles through views', async ({ page }) => {
-    // Start on worktrees
-    await expect(page.locator('.tab[data-view="worktrees"]')).toHaveClass(/active/);
+    // Start on operational
+    await expect(page.locator('.tab[data-view="operational"]')).toHaveClass(/active/);
 
-    // Tab -> issues
+    // Tab -> planning
     await page.keyboard.press('Tab');
-    await expect(page.locator('.tab[data-view="issues"]')).toHaveClass(/active/);
+    await expect(page.locator('.tab[data-view="planning"]')).toHaveClass(/active/);
 
-    // Tab -> prs
+    // Tab -> back to operational (cycle)
     await page.keyboard.press('Tab');
-    await expect(page.locator('.tab[data-view="prs"]')).toHaveClass(/active/);
-
-    // Tab -> back to worktrees (cycle)
-    await page.keyboard.press('Tab');
-    await expect(page.locator('.tab[data-view="worktrees"]')).toHaveClass(/active/);
+    await expect(page.locator('.tab[data-view="operational"]')).toHaveClass(/active/);
   });
 
   test('Tab cycling persists state', async ({ page }) => {
@@ -232,7 +228,7 @@ test.describe('Keyboard - Tab Cycling', () => {
       return JSON.parse(localStorage.getItem('bearing-state') || '{}');
     });
 
-    expect(savedState.currentView).toBe('issues');
+    expect(savedState.currentView).toBe('planning');
   });
 });
 
@@ -240,6 +236,7 @@ test.describe('Keyboard - Help Modal', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
@@ -273,11 +270,11 @@ test.describe('Keyboard - Help Modal', () => {
 
     // Try to change view - should not work
     await page.keyboard.press('2');
-    await expect(page.locator('.tab[data-view="worktrees"]')).toHaveClass(/active/);
+    await expect(page.locator('.tab[data-view="operational"]')).toHaveClass(/active/);
   });
 });
 
-test.describe('Keyboard - Plans Modal', () => {
+test.describe('Keyboard - Plans View Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/projects', route => route.fulfill({ json: mockProjects }));
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
@@ -285,44 +282,33 @@ test.describe('Keyboard - Plans Modal', () => {
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
+    // Switch to planning view
+    await page.keyboard.press('2');
   });
 
-  test('p key opens plans modal', async ({ page }) => {
-    await page.keyboard.press('p');
+  test('j/k navigates plans in planning view', async ({ page }) => {
+    await page.waitForSelector('#plans-rows .table-row');
 
-    await expect(page.locator('#plans-modal')).not.toHaveClass(/hidden/);
-  });
+    // Focus plans table
+    await page.keyboard.press('l');
 
-  test('j/k navigates plans in modal', async ({ page }) => {
-    await page.keyboard.press('p');
-    await page.waitForSelector('#plans-list .list-item');
-
-    // First plan selected
-    await expect(page.locator('#plans-list .list-item.selected')).toContainText('TUI improvements');
+    // First plan should be selected
+    await expect(page.locator('#plans-rows .table-row.selected')).toHaveAttribute('data-index', '0');
 
     // Navigate down
     await page.keyboard.press('j');
-    await expect(page.locator('#plans-list .list-item.selected')).toContainText('Add compass');
+    await expect(page.locator('#plans-rows .table-row.selected')).toHaveAttribute('data-index', '1');
 
     // Navigate back up
     await page.keyboard.press('k');
-    await expect(page.locator('#plans-list .list-item.selected')).toContainText('TUI improvements');
+    await expect(page.locator('#plans-rows .table-row.selected')).toHaveAttribute('data-index', '0');
   });
 
-  test('Escape closes plans modal', async ({ page }) => {
-    await page.keyboard.press('p');
-    await expect(page.locator('#plans-modal')).not.toHaveClass(/hidden/);
+  test('details panel shows selected plan info', async ({ page }) => {
+    await page.waitForSelector('#plans-rows .table-row');
 
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#plans-modal')).toHaveClass(/hidden/);
-  });
-
-  test('p key also closes plans modal', async ({ page }) => {
-    await page.keyboard.press('p');
-    await expect(page.locator('#plans-modal')).not.toHaveClass(/hidden/);
-
-    await page.keyboard.press('p');
-    await expect(page.locator('#plans-modal')).toHaveClass(/hidden/);
+    // Should show first plan's details
+    await expect(page.locator('#details-content')).toContainText('TUI improvements');
   });
 });
 
@@ -334,6 +320,7 @@ test.describe('Keyboard - Refresh', () => {
       route.fulfill({ json: mockProjects });
     });
     await page.route('**/api/worktrees', route => route.fulfill({ json: mockWorktrees }));
+    await page.route('**/api/plans', route => route.fulfill({ json: mockPlans }));
     await page.route('**/api/events', route => route.abort());
 
     await page.goto('/');
