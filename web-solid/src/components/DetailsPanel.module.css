@@ -1,0 +1,54 @@
+.section {
+  padding: 0 8px 8px;
+}
+
+.header {
+  background: var(--bg-surface);
+  color: var(--accent-yellow);
+  font-weight: bold;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+.panel {
+  height: 80px;
+  padding: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 0 0 4px 4px;
+  outline: none;
+  overflow-y: auto;
+}
+
+.panel:focus-within {
+  border-color: var(--border-focus);
+}
+
+.empty {
+  color: var(--text-dim);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 4px 24px;
+}
+
+.row {
+  display: flex;
+}
+
+.label {
+  color: var(--accent-yellow);
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.value {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
