@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, fireEvent, screen } from '@solidjs/testing-library';
+import { render } from '@solidjs/testing-library';
 import App from '../App';
 import { state } from '../stores/state';
 

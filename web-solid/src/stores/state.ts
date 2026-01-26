@@ -180,8 +180,44 @@ export function navigateProjects(direction: 'up' | 'down') {
   setState('selectedProject', projects[newIndex].name);
 }
 
+function sortWorktrees(worktrees: Worktree[], column: string, direction: 'asc' | 'desc'): Worktree[] {
+  const sorted = [...worktrees];
+  const dir = direction === 'asc' ? 1 : -1;
+
+  if (column === 'default') {
+    const prOrder: Record<string, number> = { OPEN: 0, DRAFT: 1, MERGED: 2, CLOSED: 3 };
+    sorted.sort((a, b) => {
+      const aPr = prOrder[a.prState || ''] ?? 4;
+      const bPr = prOrder[b.prState || ''] ?? 4;
+      if (aPr !== bPr) return (aPr - bPr) * dir;
+      if (a.dirty !== b.dirty) return ((b.dirty ? 1 : 0) - (a.dirty ? 1 : 0)) * dir;
+      return a.folder.localeCompare(b.folder) * dir;
+    });
+  } else if (column === 'folder') {
+    sorted.sort((a, b) => a.folder.localeCompare(b.folder) * dir);
+  } else if (column === 'branch') {
+    sorted.sort((a, b) => a.branch.localeCompare(b.branch) * dir);
+  } else if (column === 'status') {
+    sorted.sort((a, b) => {
+      const aScore = a.dirty ? 0 : (a.unpushed > 0 ? 1 : 2);
+      const bScore = b.dirty ? 0 : (b.unpushed > 0 ? 1 : 2);
+      return (aScore - bScore) * dir;
+    });
+  } else if (column === 'pr') {
+    const prOrder: Record<string, number> = { OPEN: 0, DRAFT: 1, MERGED: 2, CLOSED: 3 };
+    sorted.sort((a, b) => {
+      const aPr = prOrder[a.prState || ''] ?? 4;
+      const bPr = prOrder[b.prState || ''] ?? 4;
+      return (aPr - bPr) * dir;
+    });
+  }
+
+  return sorted;
+}
+
 export function navigateWorktrees(direction: 'up' | 'down') {
-  const worktrees = state.worktrees.filter(w => w.repo === state.selectedProject);
+  const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
+  const worktrees = sortWorktrees(filtered, state.sortColumn, state.sortDirection);
   if (worktrees.length === 0) return;
 
   const currentIndex = worktrees.findIndex(w => w.folder === state.selectedWorktreeFolder);

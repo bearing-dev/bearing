@@ -49,10 +49,13 @@ function App() {
           e.preventDefault();
           if (state.focusedPanel === 'project-list') {
             navigateProjects('down');
+            document.querySelector<HTMLElement>('[data-panel="project-list"]')?.focus();
           } else if (state.focusedPanel === 'worktree-table') {
             navigateWorktrees('down');
+            document.querySelector<HTMLElement>('[data-panel="worktree-table"]')?.focus();
           } else if (state.focusedPanel === 'plans-table') {
             navigatePlans('down');
+            document.querySelector<HTMLElement>('[data-panel="plans-table"]')?.focus();
           }
           break;
         case 'k':
@@ -60,10 +63,13 @@ function App() {
           e.preventDefault();
           if (state.focusedPanel === 'project-list') {
             navigateProjects('up');
+            document.querySelector<HTMLElement>('[data-panel="project-list"]')?.focus();
           } else if (state.focusedPanel === 'worktree-table') {
             navigateWorktrees('up');
+            document.querySelector<HTMLElement>('[data-panel="worktree-table"]')?.focus();
           } else if (state.focusedPanel === 'plans-table') {
             navigatePlans('up');
+            document.querySelector<HTMLElement>('[data-panel="plans-table"]')?.focus();
           }
           break;
         case 'l':
