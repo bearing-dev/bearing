@@ -1,13 +1,9 @@
 .panel {
-  width: 220px;
-  min-width: 180px;
-  flex-shrink: 0;
+  flex: 1;
   background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .panel:focus-within {

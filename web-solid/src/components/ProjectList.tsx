@@ -9,7 +9,7 @@ export function ProjectList() {
   };
 
   return (
-    <aside class={styles.panel}>
+    <div class={styles.panel}>
       <div class={styles.header}>[0] Projects</div>
       <ul class={styles.list} tabIndex={0} data-panel="project-list">
         <For each={state.projects}>
@@ -24,6 +24,6 @@ export function ProjectList() {
           )}
         </For>
       </ul>
-    </aside>
+    </div>
   );
 }

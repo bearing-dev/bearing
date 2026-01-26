@@ -160,3 +160,58 @@ export function getSelectedWorktree() {
 export function getSelectedPlan() {
   return state.plans.find(p => p.path === state.selectedPlanPath);
 }
+
+// Navigation helpers
+export function navigateProjects(direction: 'up' | 'down') {
+  const projects = state.projects;
+  if (projects.length === 0) return;
+
+  const currentIndex = projects.findIndex(p => p.name === state.selectedProject);
+  let newIndex: number;
+
+  if (currentIndex === -1) {
+    newIndex = direction === 'down' ? 0 : projects.length - 1;
+  } else if (direction === 'down') {
+    newIndex = Math.min(currentIndex + 1, projects.length - 1);
+  } else {
+    newIndex = Math.max(currentIndex - 1, 0);
+  }
+
+  setState('selectedProject', projects[newIndex].name);
+}
+
+export function navigateWorktrees(direction: 'up' | 'down') {
+  const worktrees = state.worktrees.filter(w => w.repo === state.selectedProject);
+  if (worktrees.length === 0) return;
+
+  const currentIndex = worktrees.findIndex(w => w.folder === state.selectedWorktreeFolder);
+  let newIndex: number;
+
+  if (currentIndex === -1) {
+    newIndex = direction === 'down' ? 0 : worktrees.length - 1;
+  } else if (direction === 'down') {
+    newIndex = Math.min(currentIndex + 1, worktrees.length - 1);
+  } else {
+    newIndex = Math.max(currentIndex - 1, 0);
+  }
+
+  setState('selectedWorktreeFolder', worktrees[newIndex].folder);
+}
+
+export function navigatePlans(direction: 'up' | 'down') {
+  const plans = state.plans.filter(p => p.project === state.selectedProject);
+  if (plans.length === 0) return;
+
+  const currentIndex = plans.findIndex(p => p.path === state.selectedPlanPath);
+  let newIndex: number;
+
+  if (currentIndex === -1) {
+    newIndex = direction === 'down' ? 0 : plans.length - 1;
+  } else if (direction === 'down') {
+    newIndex = Math.min(currentIndex + 1, plans.length - 1);
+  } else {
+    newIndex = Math.max(currentIndex - 1, 0);
+  }
+
+  setState('selectedPlanPath', plans[newIndex].path);
+}

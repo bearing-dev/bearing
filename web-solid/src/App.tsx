@@ -1,5 +1,5 @@
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
-import { state, setView, setFocusedPanel } from './stores/state';
+import { state, setView, setFocusedPanel, navigateProjects, navigateWorktrees, navigatePlans } from './stores/state';
 import { refresh, connectSSE, disconnectSSE } from './api/client';
 import { TabBar } from './components/TabBar';
 import { ProjectList } from './components/ProjectList';
@@ -36,6 +36,41 @@ function App() {
         case '0':
           setFocusedPanel('project-list');
           document.querySelector<HTMLElement>('[data-panel="project-list"]')?.focus();
+          break;
+        case 'j':
+        case 'ArrowDown':
+          e.preventDefault();
+          if (state.focusedPanel === 'project-list') {
+            navigateProjects('down');
+          } else if (state.focusedPanel === 'worktree-table') {
+            navigateWorktrees('down');
+          } else if (state.focusedPanel === 'plans-table') {
+            navigatePlans('down');
+          }
+          break;
+        case 'k':
+        case 'ArrowUp':
+          e.preventDefault();
+          if (state.focusedPanel === 'project-list') {
+            navigateProjects('up');
+          } else if (state.focusedPanel === 'worktree-table') {
+            navigateWorktrees('up');
+          } else if (state.focusedPanel === 'plans-table') {
+            navigatePlans('up');
+          }
+          break;
+        case 'l':
+        case 'ArrowRight':
+          e.preventDefault();
+          if (state.focusedPanel === 'project-list') {
+            const panel = state.currentView === 'operational' ? 'worktree-table' : 'plans-table';
+            setFocusedPanel(panel);
+          }
+          break;
+        case 'h':
+        case 'ArrowLeft':
+          e.preventDefault();
+          setFocusedPanel('project-list');
           break;
         case 'r':
           refresh();
